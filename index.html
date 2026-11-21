@@ -287,6 +287,41 @@
       @media (max-width:760px){ .sync-grid{ grid-template-columns:1fr; } }
       .cloud-profile-row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); flex-wrap:wrap; }
       .cloud-profile-row:last-child{ border-bottom:none; }
+
+      /* ---------- Forecast / pay periods ---------- */
+      .fc-controls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end; margin-bottom: 6px; }
+      .fc-controls label.field { margin-bottom: 0; }
+      .fc-controls label.field select, .fc-controls label.field input { min-width: 150px; }
+      .fc-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 14px 0 4px; }
+      @media (max-width: 760px) { .fc-stats { grid-template-columns: repeat(2, 1fr); } }
+      .fc-note { color: var(--ink-soft); font-size: .88rem; margin: 8px 0 0; }
+      .period-hero {
+        background: var(--accent-soft); border-radius: var(--radius);
+        padding: 16px 18px; margin-bottom: 6px;
+      }
+      .period-hero .p-when { font-weight: 700; font-size: 1.05rem; }
+      .period-hero .p-sub { color: var(--ink-soft); font-size: .9rem; margin-top: 2px; }
+      .period-hero .p-nums {
+        display: flex; flex-wrap: wrap; gap: 6px 22px; margin-top: 10px;
+        font-family: "IBM Plex Mono", monospace; font-size: .95rem; font-variant-numeric: tabular-nums;
+      }
+      .period-hero .p-nums b { font-weight: 600; }
+      .period-block { padding: 14px 0 4px; border-top: 1px solid var(--line); }
+      .period-block:first-of-type { border-top: none; }
+      .period-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+      .period-head .p-when { font-weight: 700; }
+      .period-head .p-left { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-variant-numeric: tabular-nums; }
+      .period-head .p-left.neg { color: var(--neg); }
+      .period-exp {
+        display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+        padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: .94rem;
+      }
+      .period-exp:last-child { border-bottom: none; }
+      .period-exp .pe-main { min-width: 0; overflow-wrap: anywhere; }
+      .period-exp .pe-date { color: var(--ink-faint); font-size: .85rem; white-space: nowrap; }
+      .period-exp .pe-amt { font-family: "IBM Plex Mono", monospace; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+      .period-total { display: flex; justify-content: space-between; gap: 12px; padding-top: 8px; font-size: .94rem; color: var(--ink-soft); }
+      .period-total .pe-amt { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-variant-numeric: tabular-nums; }
       footer { margin-top: 40px; color: var(--ink-faint); font-size: .85rem; text-align: center; }
 
       @media (max-width: 760px) {
@@ -349,6 +384,7 @@
         <button role="tab" aria-selected="false" data-tab="ledger">Ledger</button>
         <button role="tab" aria-selected="false" data-tab="budgets">Budgets</button>
         <button role="tab" aria-selected="false" data-tab="recurring">Recurring</button>
+        <button role="tab" aria-selected="false" data-tab="forecast">Forecast</button>
         <button role="tab" aria-selected="false" data-tab="reports">Reports</button>
         <button role="tab" aria-selected="false" data-tab="sync">Cloud Sync</button>
         <button role="tab" aria-selected="false" data-tab="backup">Backup &amp; Download</button>
@@ -542,6 +578,73 @@
         </div>
       </section>
 
+      <!-- ============ FORECAST ============ -->
+      <section class="panel" id="panel-forecast" role="tabpanel">
+        <h2>Forecast &amp; pay periods</h2>
+        <p class="panel-intro">Project your balance over any timeframe you pick, using your current balances plus your recurring income and bills — and see exactly which expenses land between one payday and the next.</p>
+
+        <div class="card">
+          <h2 style="font-size:1.1rem">Balance projection</h2>
+          <p class="fineprint" style="margin:2px 0 14px">Pick a timeframe and the balance is projected day by day: every recurring transaction that falls inside it is applied on its due date, along with any ledger entries already dated inside it.</p>
+          <div class="fc-controls">
+            <label class="field">Timeframe
+              <select id="fc-range">
+                <option value="30">Next 30 days</option>
+                <option value="60">Next 60 days</option>
+                <option value="90" selected>Next 90 days</option>
+                <option value="180">Next 6 months</option>
+                <option value="365">Next 12 months</option>
+                <option value="custom">Custom dates…</option>
+              </select>
+            </label>
+            <label class="field">From
+              <input type="date" id="fc-start" />
+            </label>
+            <label class="field" id="fc-end-wrap" style="display:none">To
+              <input type="date" id="fc-end" />
+            </label>
+            <label class="field">Account
+              <select id="fc-account"><option value="">All accounts (total)</option></select>
+            </label>
+          </div>
+          <div class="fc-stats">
+            <div class="stat"><div class="label">Projected balance</div><div class="value" id="fc-end-bal">$0.00</div></div>
+            <div class="stat"><div class="label">Net change</div><div class="value" id="fc-net">$0.00</div></div>
+            <div class="stat"><div class="label">Income in period</div><div class="value pos" id="fc-inc">$0.00</div></div>
+            <div class="stat"><div class="label">Expenses in period</div><div class="value neg" id="fc-exp">$0.00</div></div>
+          </div>
+          <p class="fc-note" id="fc-lowest"></p>
+          <div class="chart-box" id="fc-chart" style="margin-top:10px"></div>
+          <div id="fc-events-wrap" style="margin-top:14px">
+            <table class="ledger" aria-label="Projected transactions">
+              <thead><tr>
+                <th>Date</th><th>Description</th><th>Category</th><th>Source</th><th class="amt">Amount</th><th class="amt">Balance</th>
+              </tr></thead>
+              <tbody id="fc-events"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="fc-empty" style="display:none">
+            <strong>Nothing projected in this timeframe</strong>
+            No recurring transactions or dated ledger entries fall inside it. Add recurring bills and paycheques in the Recurring tab and they'll show up here.
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 style="font-size:1.1rem">Between pays — what's due before your next payday</h2>
+          <p class="fineprint" style="margin:2px 0 14px">Pick which recurring income is your pay. Each block below runs from one payday to the day before the next, and lists every recurring expense that lands in between — so you can see what's spoken for before the money even arrives.</p>
+          <div class="fc-controls">
+            <label class="field">My pay is
+              <select id="fc-pay-source"></select>
+            </label>
+          </div>
+          <div id="pay-periods"></div>
+          <div class="empty" id="pay-empty" style="display:none">
+            <strong>No recurring pay found</strong>
+            Add your paycheque as a recurring <em>income</em> transaction in the Recurring tab (e.g. “Paycheque”, every 2 weeks), and this view will line your bills up between paydays.
+          </div>
+        </div>
+      </section>
+
       <!-- ============ REPORTS ============ -->
       <section class="panel" id="panel-reports" role="tabpanel">
         <h2>Reports</h2>
@@ -569,7 +672,7 @@
 
         <div class="baked-box warn" id="baked-box">
           <strong id="baked-title">⚠ One-time setup inside this file — replace “place key here”</strong>
-          <p class="fineprint" style="margin:6px 0 0" id="baked-detail">This copy has placeholders baked in so <em>any</em> browser that opens it points at the same database — no pasting the key on each device. Open <code>index.html</code> in a text editor (Notepad / VS Code), search for <code>PLACE_URL_HERE</code> and <code>PLACE_KEY_HERE</code> near the top of the script, and replace them once: <code>PLACE_URL_HERE</code> → your Project URL like <code>https://abcd1234.supabase.co</code>, and <code>PLACE_KEY_HERE</code> → your <strong>publishable / anon key</strong> (the long <code>eyJ…</code> one — <em>never</em> the secret key). Save, re-upload that one file to Git / Netlify, and every device is connected automatically. Keep the repo / Netlify site private, since anyone who can open the file can see the publishable key.</p>
+          <p class="fineprint" style="margin:6px 0 0" id="baked-detail">This copy has placeholders baked in so <em>any</em> browser that opens it points at the same database — no pasting the key on each device. Open <code>index.html</code> in a text editor (Notepad / VS Code), search for <code>https://jwqwdsowcsqbicaldrfs.supabase.co/</code> and <code>sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO</code> near the top of the script, and replace them once: <code>https://jwqwdsowcsqbicaldrfs.supabase.co/</code> → your Project URL like <code>https://abcd1234.supabase.co</code>, and <code>sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO</code> → your <strong>publishable / anon key</strong> (the long <code>eyJ…</code> one — <em>never</em> the secret key). Save, re-upload that one file to Git / Netlify, and every device is connected automatically. Keep the repo / Netlify site private, since anyone who can open the file can see the publishable key.</p>
         </div>
 
         <div class="card">
@@ -577,7 +680,7 @@
           <div class="steps" style="margin-top:12px">
             <div class="step"><div class="step-num">1</div><div class="step-body"><strong>Create a free Supabase project</strong><p>Go to <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a> → New project. Pick any name (e.g. <em>finance-tracker</em>) and a region near you. Wait ~1 minute for it to provision. Free tier is enough.</p></div></div>
             <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Create the table — run this SQL once</strong><p>In Supabase: left sidebar → <strong>SQL Editor</strong> → New query → paste the SQL below → Run. You only do this once.</p></div></div>
-            <div class="step"><div class="step-num">3</div><div class="step-body"><strong>Bake the link into the file (recommended) — or paste it below</strong><p><strong>Baked-in way (do this once, works on every device):</strong> edit <code>index.html</code>, replace <code>PLACE_URL_HERE</code> with your Project URL and <code>PLACE_KEY_HERE</code> with your publishable / anon key from Supabase <strong>Settings → API</strong>, save and re-upload. Any browser opening that file is already connected and auto-syncs — nothing to paste on your phone or work PC again. <strong>Per-browser way (fallback):</strong> paste the same URL + key in the Connection form below and tap Save connection — that only saves in this browser.</p></div></div>
+            <div class="step"><div class="step-num">3</div><div class="step-body"><strong>Bake the link into the file (recommended) — or paste it below</strong><p><strong>Baked-in way (do this once, works on every device):</strong> edit <code>index.html</code>, replace <code>https://jwqwdsowcsqbicaldrfs.supabase.co/</code> with your Project URL and <code>sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO</code> with your publishable / anon key from Supabase <strong>Settings → API</strong>, save and re-upload. Any browser opening that file is already connected and auto-syncs — nothing to paste on your phone or work PC again. <strong>Per-browser way (fallback):</strong> paste the same URL + key in the Connection form below and tap Save connection — that only saves in this browser.</p></div></div>
             <div class="step"><div class="step-num">4</div><div class="step-body"><strong>Push, then pull on your other device</strong><p>Tap <strong>Push to cloud</strong> here. On your other device just open the same site (with the baked-in file) and tap <strong>Pull from cloud</strong> — no setup needed there. With a baked-in connection, Auto-sync is on by default and pushes a few seconds after every change.</p></div></div>
           </div>
           <h2 style="font-size:1rem; margin-top:20px">SQL to run in Supabase</h2>
@@ -608,7 +711,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
 
         <div class="card">
           <h2 style="font-size:1.1rem">Connection</h2>
-          <p class="fineprint" id="connection-note" style="margin:0 0 12px">If you already replaced <code>PLACE_KEY_HERE</code> in the file, you're connected — you can leave this form blank. Use this form only as a per-browser override / fallback.</p>
+          <p class="fineprint" id="connection-note" style="margin:0 0 12px">If you already replaced <code>sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO</code> in the file, you're connected — you can leave this form blank. Use this form only as a per-browser override / fallback.</p>
           <form id="form-supabase">
             <label class="field">Supabase Project URL
               <input name="url" id="sb-url" type="url" placeholder="https://abcdefghijk.supabase.co" autocomplete="off" spellcheck="false" />
@@ -665,7 +768,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         </div>
         <div class="card">
           <h2 style="font-size:1.1rem">Take this file with you</h2>
-          <p class="fineprint">Download a copy of this tracker as a single <code>index.html</code> — with the current profile's data baked in — ready to commit to a Git repository or drop onto a static host. If you replaced <code>PLACE_URL_HERE</code> / <code>PLACE_KEY_HERE</code> in this file, that baked-in Supabase link travels with the download, so any browser opening it connects automatically. If you only pasted the key in the Cloud Sync form (per-browser), it is <strong>not</strong> baked into the download — either bake it in as above, or reconnect once per browser after you deploy. Editing and re-uploading this file does not touch your Supabase data.</p>
+          <p class="fineprint">Download a copy of this tracker as a single <code>index.html</code> — with the current profile's data baked in — ready to commit to a Git repository or drop onto a static host. If you replaced <code>https://jwqwdsowcsqbicaldrfs.supabase.co/</code> / <code>sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO</code> in this file, that baked-in Supabase link travels with the download, so any browser opening it connects automatically. If you only pasted the key in the Cloud Sync form (per-browser), it is <strong>not</strong> baked into the download — either bake it in as above, or reconnect once per browser after you deploy. Editing and re-uploading this file does not touch your Supabase data.</p>
           <div class="backup-actions">
             <button class="btn" id="btn-download-html" type="button">Download index.html</button>
           </div>
@@ -674,7 +777,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
             <li><strong>GitHub:</strong> create a repository, add the downloaded file as <code>index.html</code>, then enable GitHub Pages (Settings → Pages → deploy from the main branch) to get a public URL.</li>
             <li><strong>Netlify:</strong> drag the folder containing <code>index.html</code> onto Netlify's Sites page — it deploys instantly. You can host as many separate sites as you like on the free plan, so this and your geo tool can live side by side, each with its own URL.</li>
             <li><strong>Editing at work:</strong> edit the file in the GitHub web editor or push changes from any machine; the host redeploys automatically. With Supabase connected, your data lives in the database — redeploying the HTML won't lose it. Without Supabase, each browser keeps its own copy, so use export/import to move books between devices.</li>
-            <li><strong>Supabase + Netlify/GitHub (baked-in):</strong> before you upload, edit <code>index.html</code> once — replace <code>PLACE_URL_HERE</code> and <code>PLACE_KEY_HERE</code> (search for “place key here” in the file) with your Project URL and publishable key. Upload that file. Every device that opens the live URL is already connected — no setup on phone or work PC — just Pull once on a new device to load your profiles. Keep the repo / site private.</li>
+            <li><strong>Supabase + Netlify/GitHub (baked-in):</strong> before you upload, edit <code>index.html</code> once — replace <code>https://jwqwdsowcsqbicaldrfs.supabase.co/</code> and <code>sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO</code> (search for “place key here” in the file) with your Project URL and publishable key. Upload that file. Every device that opens the live URL is already connected — no setup on phone or work PC — just Pull once on a new device to load your profiles. Keep the repo / site private.</li>
           </ol>
         </div>
       </section>
@@ -694,11 +797,11 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
          pasting the key on your phone, work PC, or any other
          device again, and Auto-sync will be on by default.
 
-           1) PLACE_URL_HERE  ->  your Supabase Project URL
+           1) https://jwqwdsowcsqbicaldrfs.supabase.co/  ->  your Supabase Project URL
               Example: "https://abcdefghijklm.supabase.co"
               Find it in Supabase: Settings -> API -> Project URL
 
-           2) PLACE_KEY_HERE  ->  your PUBLISHABLE / anon key
+           2) sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO  ->  your PUBLISHABLE / anon key
               The long key starting with "eyJ..." in
               Supabase: Settings -> API -> publishable / anon key
 
@@ -797,8 +900,8 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         var u = String(typeof BAKED_SUPABASE_URL !== "undefined" ? BAKED_SUPABASE_URL : "").trim().replace(/\/+$/, "");
         var k = String(typeof BAKED_SUPABASE_KEY !== "undefined" ? BAKED_SUPABASE_KEY : "").trim();
         var isPlaceholder = function (v, ph) { return !v || v === ph || v.toUpperCase().indexOf("PLACE_") === 0 || v.toLowerCase().indexOf("place key here") !== -1 || v.toLowerCase().indexOf("place url here") !== -1; };
-        if (isPlaceholder(u, "PLACE_URL_HERE")) u = "";
-        if (isPlaceholder(k, "PLACE_KEY_HERE")) k = "";
+        if (isPlaceholder(u, "https://jwqwdsowcsqbicaldrfs.supabase.co/")) u = "";
+        if (isPlaceholder(k, "sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO")) k = "";
         return { url: u, key: k, ready: !!(u && k) };
       }
       function sbConfig() {
@@ -839,13 +942,13 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         if (baked.ready) {
           box.className = "baked-box";
           if (title) title.textContent = "✓ Baked-in connection is active — this file points at your database";
-          if (detail) detail.innerHTML = "This copy of <code>index.html</code> already has your Supabase URL + publishable key baked in (<code>" + baked.url.replace(/</g, "&lt;") + "</code>), so any browser that opens it connects automatically — no setup on your phone or work PC. Auto-sync is on by default. <strong>On a new device, tap Pull from cloud first</strong> (below) before adding transactions, so you load the cloud copy instead of pushing an empty local one over it. Keep the repo / site private. To point it at a different project, edit the <code>PLACE_URL_HERE</code> / <code>PLACE_KEY_HERE</code> lines again in the file and re-upload.";
+          if (detail) detail.innerHTML = "This copy of <code>index.html</code> already has your Supabase URL + publishable key baked in (<code>" + baked.url.replace(/</g, "&lt;") + "</code>), so any browser that opens it connects automatically — no setup on your phone or work PC. Auto-sync is on by default. <strong>On a new device, tap Pull from cloud first</strong> (below) before adding transactions, so you load the cloud copy instead of pushing an empty local one over it. Keep the repo / site private. To point it at a different project, edit the <code>https://jwqwdsowcsqbicaldrfs.supabase.co/</code> / <code>sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO</code> lines again in the file and re-upload.";
           if (note) note.innerHTML = "Baked-in connection active — you can leave this form blank. Anything you save here is only a per-browser override and will take precedence over the baked-in values in this browser.";
         } else {
           box.className = "baked-box warn";
           if (title) title.textContent = "⚠ One-time setup inside this file — replace “place key here”";
           /* detail keeps its instructional HTML from the markup */
-          if (note) note.innerHTML = "If you already replaced <code>PLACE_KEY_HERE</code> in the file, you're connected — you can leave this form blank. Use this form only as a per-browser override / fallback.";
+          if (note) note.innerHTML = "If you already replaced <code>sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO</code> in the file, you're connected — you can leave this form blank. Use this form only as a per-browser override / fallback.";
         }
       }
       function setCloudStatus(mode, text) {
@@ -857,7 +960,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         var detail = document.getElementById("sb-status-detail");
         if (title && detail) {
           var cfg = sbConfig();
-          if (!sbConfigured()) { title.textContent = "Not connected"; detail.textContent = "Replace PLACE_URL_HERE / PLACE_KEY_HERE in this file (see box above), or paste your URL + key in the form to enable database sync in this browser only."; }
+          if (!sbConfigured()) { title.textContent = "Not connected"; detail.textContent = "Replace https://jwqwdsowcsqbicaldrfs.supabase.co/ / sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO in this file (see box above), or paste your URL + key in the form to enable database sync in this browser only."; }
           else if (mode === "error") { title.textContent = "Connected — sync error"; detail.textContent = text; }
           else if (mode === "syncing") { title.textContent = "Syncing…"; detail.textContent = text; }
           else if (mode === "on") { title.textContent = cfg.usingBaked ? "Connected to Supabase — via baked-in file link" : "Connected to Supabase"; detail.textContent = text; }
@@ -867,7 +970,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         renderBakedBox();
       }
       function refreshCloudStatus() {
-        if (!sbConfigured()) { setCloudStatus("", bakedSb().ready ? "Cloud: Not connected" : "Cloud: Not connected — replace PLACE_KEY_HERE in the file (Cloud Sync tab) or paste your key there"); return; }
+        if (!sbConfigured()) { setCloudStatus("", bakedSb().ready ? "Cloud: Not connected" : "Cloud: Not connected — replace sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO in the file (Cloud Sync tab) or paste your key there"); return; }
         var cfg = sbConfig();
         var via = cfg.usingBaked ? " via baked-in link" : "";
         var last = lsGet(LS_SB_LAST + activeProfileId);
@@ -887,7 +990,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         sbPushTimer = setTimeout(function () { sbPush(false); }, 2500);
       }
       function sbPush(manual) {
-        if (!sbConfigured()) { if (manual) setMsg("msg-sync", "Not connected yet — replace PLACE_URL_HERE / PLACE_KEY_HERE in this file and re-upload, or paste your Project URL + publishable key in the Connection form and Save connection.", false); return Promise.resolve(false); }
+        if (!sbConfigured()) { if (manual) setMsg("msg-sync", "Not connected yet — replace https://jwqwdsowcsqbicaldrfs.supabase.co/ / sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO in this file and re-upload, or paste your Project URL + publishable key in the Connection form and Save connection.", false); return Promise.resolve(false); }
         if (sbSyncing) return Promise.resolve(false);
         sbSyncing = true;
         setCloudStatus("syncing", "Cloud: Syncing — pushing to Supabase…");
@@ -920,7 +1023,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         }).then(function (rows) { return rows && rows.length ? rows[0] : null; });
       }
       function sbPull(idOverride, nameOverride) {
-        if (!sbConfigured()) { setMsg("msg-sync", "Not connected yet — replace PLACE_URL_HERE / PLACE_KEY_HERE in this file and re-upload, or paste your Project URL + publishable key in the Connection form and Save connection.", false); return; }
+        if (!sbConfigured()) { setMsg("msg-sync", "Not connected yet — replace https://jwqwdsowcsqbicaldrfs.supabase.co/ / sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO in this file and re-upload, or paste your Project URL + publishable key in the Connection form and Save connection.", false); return; }
         var targetId = idOverride || activeProfileId;
         setCloudStatus("syncing", "Cloud: Syncing — pulling from Supabase…");
         sbFetchProfile(targetId).then(function (row) {
@@ -947,7 +1050,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         });
       }
       function sbTest() {
-        if (!sbConfigured()) { setMsg("msg-supabase", "No connection yet — either replace PLACE_KEY_HERE in the file, or paste your Project URL + publishable key here and Save connection first.", false); return; }
+        if (!sbConfigured()) { setMsg("msg-supabase", "No connection yet — either replace sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO in the file, or paste your Project URL + publishable key here and Save connection first.", false); return; }
         setMsg("msg-supabase", "Testing connection…", true);
         fetch(sbTableUrl("?select=id&limit=1"), { method: "GET", headers: sbHeaders() }).then(function (res) {
           if (!res.ok) return res.text().then(function (t) { throw new Error("Supabase " + res.status + ": " + t.slice(0, 220)); });
@@ -1076,7 +1179,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
       function render() {
         saveState();
         renderProfileBar();
-        renderSummary(); renderAccounts(); renderLedger(); renderBudgets(); renderRecurring(); renderReports(); syncSelects();
+        renderSummary(); renderAccounts(); renderLedger(); renderBudgets(); renderRecurring(); renderReports(); renderForecast(); syncSelects();
       }
       function renderProfileBar() {
         var p = currentProfile();
@@ -1242,6 +1345,61 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         else if (freq === "yearly") d.setFullYear(d.getFullYear() + 1);
         return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
       }
+      function prevDate(dateStr, freq) {
+        var p = dateStr.split("-");
+        var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+        if (freq === "weekly") d.setDate(d.getDate() - 7);
+        else if (freq === "biweekly") d.setDate(d.getDate() - 14);
+        else if (freq === "monthly") d.setMonth(d.getMonth() - 1);
+        else if (freq === "yearly") d.setFullYear(d.getFullYear() - 1);
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      }
+      function addDaysStr(dateStr, n) {
+        var p = dateStr.split("-");
+        var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]) + n);
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      }
+      function dayDiff(aStr, bStr) {
+        var pa = aStr.split("-"), pb = bStr.split("-");
+        var a = Date.UTC(Number(pa[0]), Number(pa[1]) - 1, Number(pa[2]));
+        var b = Date.UTC(Number(pb[0]), Number(pb[1]) - 1, Number(pb[2]));
+        return Math.round((b - a) / 86400000);
+      }
+      /* Every date a recurring item falls on inside [start, end] (inclusive).
+         Steps forward from its nextDate; if nextDate is already past the
+         window (e.g. an overdue item), stepping still lands on real dates. */
+      function occurrencesBetween(r, start, end) {
+        var out = [];
+        if (!r || !r.nextDate || start > end) return out;
+        var cursor = r.nextDate;
+        var guard = 0;
+        while (cursor < start && guard < 600) { cursor = advanceDate(cursor, r.freq); guard++; }
+        guard = 0;
+        while (cursor <= end && guard < 600) { out.push(cursor); cursor = advanceDate(cursor, r.freq); guard++; }
+        return out;
+      }
+      /* Balance as of the morning of dateStr: opening balances plus every
+         ledger entry dated before dateStr. For one account, transfers
+         count on both sides; for the total they cancel out. */
+      function balanceAsOf(dateStr, accountId) {
+        var total = 0;
+        state.accounts.forEach(function (a) {
+          if (accountId && a.id !== accountId) return;
+          total += Number(a.opening) || 0;
+        });
+        state.transactions.forEach(function (t) {
+          if (t.date >= dateStr) return;
+          if (t.kind === "transfer") {
+            if (accountId) {
+              if (t.accountId === accountId) total -= t.amount;
+              if (t.toAccountId === accountId) total += t.amount;
+            }
+          } else if (!accountId || t.accountId === accountId) {
+            total += signedAmount(t);
+          }
+        });
+        return total;
+      }
       function renderRecurring() {
         var today = todayStr();
         $("rec-empty").style.display = state.recurring.length ? "none" : "block";
@@ -1340,6 +1498,215 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
           parts.push('<text x="' + W + '" y="12" text-anchor="end" font-size="11" fill="var(--ink-faint)"><tspan fill="var(--accent)">■</tspan> Income&nbsp;&nbsp;<tspan fill="var(--neg)">■</tspan> Expenses</text>');
         }
         $("rep-chart").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="Bar chart of income versus expenses for the last six months">' + parts.join("") + '</svg>';
+      }
+      /* ---------- Forecast & pay periods ---------- */
+      var fcPayId = "";
+      function fcRange() {
+        var startEl = $("fc-start"), endEl = $("fc-end"), rangeEl = $("fc-range");
+        var start = (startEl && startEl.value) || todayStr();
+        var end;
+        if (rangeEl && rangeEl.value === "custom") {
+          end = (endEl && endEl.value) || addDaysStr(start, 90);
+          if (end < start) end = start;
+        } else {
+          var days = rangeEl ? Number(rangeEl.value) || 90 : 90;
+          end = addDaysStr(start, days - 1);
+        }
+        return { start: start, end: end };
+      }
+      function buildEvents(start, end, accountId) {
+        var events = [];
+        state.transactions.forEach(function (t) {
+          if (t.date < start || t.date > end) return;
+          if (t.kind === "transfer") {
+            if (!accountId) return; /* cancels out in the total */
+            var delta = 0;
+            if (t.accountId === accountId) delta -= t.amount;
+            if (t.toAccountId === accountId) delta += t.amount;
+            if (delta !== 0) events.push({ date: t.date, label: t.payee || "Transfer", category: "Transfer", source: "Ledger", amount: delta });
+          } else {
+            if (accountId && t.accountId !== accountId) return;
+            events.push({ date: t.date, label: t.payee || t.category || "—", category: t.category || "—", source: "Ledger", amount: signedAmount(t) });
+          }
+        });
+        state.recurring.forEach(function (r) {
+          if (accountId && r.accountId !== accountId) return;
+          occurrencesBetween(r, start, end).forEach(function (d) {
+            events.push({
+              date: d, label: r.payee, category: r.category || "—", source: "Recurring",
+              amount: r.kind === "income" ? r.amount : -r.amount
+            });
+          });
+        });
+        events.sort(function (a, b) {
+          if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+          return b.amount - a.amount; /* income lands before expenses on the same day */
+        });
+        return events;
+      }
+      function renderForecast() {
+        if (!$("fc-start")) return;
+        /* Account filter options (preserve selection) */
+        var acctSel = $("fc-account");
+        var acctCur = acctSel.value;
+        acctSel.innerHTML = '<option value="">All accounts (total)</option>' + state.accounts.map(function (a) {
+          return '<option value="' + a.id + '">' + esc(a.name) + '</option>';
+        }).join("");
+        if (acctCur && accountById(acctCur)) acctSel.value = acctCur;
+        var accountId = acctSel.value || null;
+
+        var range = fcRange();
+        var startBal = balanceAsOf(range.start, accountId);
+        var events = buildEvents(range.start, range.end, accountId);
+        var bal = startBal, inc = 0, exp = 0, lowest = startBal, lowestDate = range.start;
+        var dayBal = [{ date: range.start, bal: startBal }];
+        events.forEach(function (ev) {
+          bal += ev.amount;
+          if (ev.amount >= 0) inc += ev.amount; else exp += -ev.amount;
+          if (bal < lowest) { lowest = bal; lowestDate = ev.date; }
+          if (dayBal[dayBal.length - 1].date === ev.date) dayBal[dayBal.length - 1].bal = bal;
+          else dayBal.push({ date: ev.date, bal: bal });
+        });
+        var endBal = bal, net = endBal - startBal;
+
+        $("fc-end-bal").textContent = money(endBal);
+        $("fc-end-bal").className = "value" + (endBal < 0 ? " neg" : "");
+        $("fc-net").textContent = (net > 0 ? "+" : "") + money(net);
+        $("fc-net").className = "value" + (net < 0 ? " neg" : net > 0 ? " pos" : "");
+        $("fc-inc").textContent = money(inc);
+        $("fc-exp").textContent = money(exp);
+        $("fc-lowest").innerHTML = events.length
+          ? "Starts at <strong>" + esc(money(startBal)) + "</strong> on " + esc(prettyDate(range.start)) +
+            " · lowest point <strong>" + esc(money(lowest)) + "</strong> on " + esc(prettyDate(lowestDate)) +
+            (lowest < 0 ? " — the projection dips below zero in this window." : "")
+          : "Starting balance in this window: <strong>" + esc(money(startBal)) + "</strong>.";
+
+        /* ---- Projection chart (hand-built SVG) ---- */
+        var W = 640, H = 230, top = 18, base = 192, left = 6, right = 634;
+        var spanDays = Math.max(1, dayDiff(range.start, range.end));
+        var minV = Math.min(startBal, lowest), maxV = Math.max(startBal, endBal);
+        dayBal.forEach(function (p) { minV = Math.min(minV, p.bal); maxV = Math.max(maxV, p.bal); });
+        if (maxV - minV < 1) { maxV += 1; minV -= 1; }
+        var pad = (maxV - minV) * 0.12; maxV += pad; minV -= pad;
+        function X(dstr) { return left + (dayDiff(range.start, dstr) / spanDays) * (right - left); }
+        function Y(v) { return top + (1 - (v - minV) / (maxV - minV)) * (base - top); }
+        var pts = [];
+        pts.push(X(range.start).toFixed(1) + "," + Y(startBal).toFixed(1));
+        dayBal.forEach(function (p) { pts.push(X(p.date).toFixed(1) + "," + Y(p.bal).toFixed(1)); });
+        pts.push(X(range.end).toFixed(1) + "," + Y(endBal).toFixed(1));
+        var parts = [];
+        if (minV < 0 && maxV > 0) {
+          parts.push('<line x1="' + left + '" y1="' + Y(0) + '" x2="' + right + '" y2="' + Y(0) + '" stroke="var(--neg)" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>');
+          parts.push('<text x="' + right + '" y="' + (Y(0) - 4) + '" text-anchor="end" font-size="10" fill="var(--neg)">$0</text>');
+        }
+        parts.push('<line x1="' + left + '" y1="' + base + '" x2="' + right + '" y2="' + base + '" stroke="var(--line)" stroke-width="2"/>');
+        parts.push('<polyline points="' + pts.join(" ") + '" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>');
+        parts.push('<circle cx="' + X(range.start) + '" cy="' + Y(startBal) + '" r="4" fill="var(--accent)"><title>Start ' + esc(money(startBal)) + '</title></circle>');
+        parts.push('<circle cx="' + X(range.end) + '" cy="' + Y(endBal) + '" r="4" fill="var(--accent)"><title>Projected ' + esc(money(endBal)) + '</title></circle>');
+        parts.push('<text x="' + left + '" y="12" font-size="11" fill="var(--ink-faint)">High ' + esc(money(maxV - pad)) + '</text>');
+        parts.push('<text x="' + right + '" y="12" text-anchor="end" font-size="11" fill="var(--ink-faint)">Low ' + esc(money(minV + pad)) + '</text>');
+        parts.push('<text x="' + left + '" y="' + (base + 20) + '" font-size="12" fill="var(--ink-soft)">' + esc(prettyDate(range.start)) + '</text>');
+        parts.push('<text x="' + right + '" y="' + (base + 20) + '" text-anchor="end" font-size="12" fill="var(--ink-soft)">' + esc(prettyDate(range.end)) + '</text>');
+        parts.push('<text x="' + (W / 2) + '" y="' + (base + 38) + '" text-anchor="middle" font-size="12" font-weight="600" fill="' + (endBal >= startBal ? "var(--pos)" : "var(--neg)") + '">Projected ' + esc(money(endBal)) + ' by ' + esc(prettyDate(range.end)) + '</text>');
+        $("fc-chart").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="Line chart of projected balance from ' + esc(prettyDate(range.start)) + ' to ' + esc(prettyDate(range.end)) + '">' + parts.join("") + '</svg>';
+
+        /* ---- Projected events table ---- */
+        $("fc-empty").style.display = events.length ? "none" : "block";
+        $("fc-events-wrap").style.display = events.length ? "block" : "none";
+        var runBal = startBal, shown = events.slice(0, 250);
+        $("fc-events").innerHTML = shown.map(function (ev) {
+          runBal += ev.amount;
+          return '<tr>' +
+            '<td>' + prettyDate(ev.date) + '</td>' +
+            '<td>' + esc(ev.label) + '</td>' +
+            '<td><span class="tag">' + esc(ev.category) + '</span></td>' +
+            '<td>' + esc(ev.source) + '</td>' +
+            '<td class="amt ' + (ev.amount >= 0 ? "pos" : "neg") + '">' + (ev.amount >= 0 ? "+" : "−") + money(Math.abs(ev.amount)).replace("-", "") + '</td>' +
+            '<td class="amt">' + money(runBal) + '</td>' +
+            '</tr>';
+        }).join("") + (events.length > shown.length
+          ? '<tr><td colspan="6" style="color:var(--ink-faint)">Showing the first ' + shown.length + ' of ' + events.length + ' projected entries — shorten the timeframe to see the rest.</td></tr>'
+          : "");
+        renderPayPeriods();
+      }
+      function renderPayPeriods() {
+        var box = $("pay-periods"), empty = $("pay-empty"), sel = $("fc-pay-source");
+        if (!box || !sel) return;
+        var pays = state.recurring.filter(function (r) { return r.kind === "income"; });
+        if (!pays.length) {
+          sel.innerHTML = '<option value="">(no recurring income yet)</option>';
+          box.innerHTML = ""; empty.style.display = "block"; return;
+        }
+        empty.style.display = "none";
+        if (!fcPayId || !pays.some(function (r) { return r.id === fcPayId; })) {
+          var pick = pays.filter(function (r) { return (r.category || "").toLowerCase() === "paycheque"; })[0] || pays[0];
+          pays.forEach(function (r) { if (r.amount > pick.amount && (pick.category || "").toLowerCase() !== "paycheque") pick = r; });
+          fcPayId = pick.id;
+        }
+        sel.innerHTML = pays.map(function (r) {
+          return '<option value="' + r.id + '"' + (r.id === fcPayId ? " selected" : "") + '>' + esc(r.payee) + ' — ' + esc(money(r.amount)) + ' · ' + esc(r.freq) + '</option>';
+        }).join("");
+        var pay = null;
+        pays.forEach(function (r) { if (r.id === fcPayId) pay = r; });
+        if (!pay) { box.innerHTML = ""; return; }
+
+        /* Pay dates: walk back from nextDate to the most recent payday on
+           or before today, then step forward for the periods to show. */
+        var today = todayStr();
+        var first = pay.nextDate, guard = 0;
+        while (first > today && guard < 600) { first = prevDate(first, pay.freq); guard++; }
+        var dates = [first];
+        for (var i = 0; i < 4; i++) dates.push(advanceDate(dates[dates.length - 1], pay.freq));
+
+        function periodData(pStart, pEndExclusive) {
+          var lastDay = addDaysStr(pEndExclusive, -1);
+          var exps = [], otherInc = 0;
+          state.recurring.forEach(function (r) {
+            if (r.id === pay.id) return;
+            occurrencesBetween(r, pStart, lastDay).forEach(function (d) {
+              if (r.kind === "expense") exps.push({ date: d, payee: r.payee, category: r.category || "—", amount: r.amount });
+              else otherInc += r.amount;
+            });
+          });
+          exps.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+          var expTotal = 0; exps.forEach(function (e) { expTotal += e.amount; });
+          return { exps: exps, expTotal: expTotal, otherInc: otherInc, leftover: pay.amount + otherInc - expTotal };
+        }
+        function expRows(pd) {
+          if (!pd.exps.length) return '<p class="fc-note">No recurring expenses fall in this period — the whole pay is unspoken for.</p>';
+          return pd.exps.map(function (e) {
+            return '<div class="period-exp"><span class="pe-main">' + esc(e.payee) + ' <span class="tag">' + esc(e.category) + '</span></span>' +
+              '<span class="pe-date">' + esc(prettyDate(e.date)) + '</span>' +
+              '<span class="pe-amt">−' + esc(money(e.amount).replace("-", "")) + '</span></div>';
+          }).join("") +
+          '<div class="period-total"><span>Total expenses between pays</span><span class="pe-amt">−' + esc(money(pd.expTotal).replace("-", "")) + '</span></div>' +
+          (pd.otherInc > 0 ? '<div class="period-total"><span>Other recurring income</span><span class="pe-amt">+' + esc(money(pd.otherInc).replace("-", "")) + '</span></div>' : "");
+        }
+
+        var html = "";
+        for (var p = 0; p < dates.length - 1; p++) {
+          var pStart = dates[p], pEnd = dates[p + 1];
+          var pd = periodData(pStart, pEnd);
+          var isCurrent = today >= pStart && today < pEnd;
+          var isNext = pStart > today && dates[p - 1] <= today || (p === 0 && pStart > today);
+          var whenLabel = (isCurrent ? "Current period · " : isNext ? "Next pay period · " : "Pay period · ") +
+            prettyDate(pStart) + " → " + prettyDate(addDaysStr(pEnd, -1));
+          if (isNext || (p === 0 && pStart > today)) {
+            html += '<div class="period-hero"><div class="p-when">' + esc(whenLabel) + '</div>' +
+              '<div class="p-sub">Pay of ' + esc(money(pay.amount)) + ' lands ' + esc(prettyDate(pStart)) + '; next pay lands ' + esc(prettyDate(pEnd)) + '. Everything below comes out in between.</div>' +
+              '<div class="p-nums"><span>Pay <b>' + esc(money(pay.amount)) + '</b></span>' +
+              '<span>Expenses <b>−' + esc(money(pd.expTotal).replace("-", "")) + '</b></span>' +
+              (pd.otherInc > 0 ? '<span>Other income <b>+' + esc(money(pd.otherInc).replace("-", "")) + '</b></span>' : "") +
+              '<span>Left over <b style="color:' + (pd.leftover < 0 ? "var(--neg)" : "var(--pos)") + '">' + esc(money(pd.leftover)) + '</b></span></div></div>' +
+              '<div style="padding:4px 2px 10px">' + expRows(pd) + '</div>';
+          } else {
+            html += '<div class="period-block"><div class="period-head"><span class="p-when">' + esc(whenLabel) + '</span>' +
+              '<span class="p-left' + (pd.leftover < 0 ? " neg" : "") + '">' + esc(money(pd.leftover)) + ' left</span></div>' +
+              '<div class="fc-note" style="margin:4px 0 2px">Pay ' + esc(money(pay.amount)) + ' · expenses −' + esc(money(pd.expTotal).replace("-", "")) + ' across ' + pd.exps.length + ' bill' + (pd.exps.length === 1 ? "" : "s") + '</div>' +
+              expRows(pd) + '</div>';
+          }
+        }
+        box.innerHTML = html;
       }
       function syncSelects() {
         var acctOpts = state.accounts.map(function (a) {
@@ -1468,6 +1835,19 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         $(id).addEventListener("change", renderLedger);
       });
 
+      /* ---------- Forecast controls ---------- */
+      $("fc-range").addEventListener("change", function () {
+        $("fc-end-wrap").style.display = $("fc-range").value === "custom" ? "block" : "none";
+        renderForecast();
+      });
+      ["fc-start", "fc-end", "fc-account"].forEach(function (id) {
+        $(id).addEventListener("change", renderForecast);
+      });
+      $("fc-pay-source").addEventListener("change", function () {
+        fcPayId = $("fc-pay-source").value;
+        renderPayPeriods();
+      });
+
       /* ---------- Profiles ---------- */
       $("profile-select").addEventListener("change", function () {
         var id = $("profile-select").value;
@@ -1571,7 +1951,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         if (idx !== -1) html = html.slice(0, idx) + seed + "\n    " + html.slice(idx);
         else html = html.replace("</body>", seed + "</body>");
         download("index.html", html, "text/html;charset=utf-8");
-        setMsg("msg-backup", bakedSb().ready ? "index.html downloaded — your current data AND your baked-in Supabase link are included, so it will connect on any device." : "index.html downloaded with your current data included. It still has PLACE_KEY_HERE placeholders — replace them in the file before uploading if you want baked-in sync on every device.", true);
+        setMsg("msg-backup", bakedSb().ready ? "index.html downloaded — your current data AND your baked-in Supabase link are included, so it will connect on any device." : "index.html downloaded with your current data included. It still has sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO placeholders — replace them in the file before uploading if you want baked-in sync on every device.", true);
       });
 
       /* ---------- Supabase wiring ---------- */
@@ -1592,7 +1972,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         var url = String($("sb-url").value || "").trim().replace(/\/+$/, "");
         var key = String($("sb-key").value || "").trim();
         if ((!url || !key) && bakedSb().ready) { setMsg("msg-supabase", "You're already connected via the baked-in link in this file — no need to save here. Testing that connection…", true); sbTest(); return; }
-        if (!url || !key) { setMsg("msg-supabase", "Both the Project URL and publishable / anon key are needed — or bake them into the file by replacing PLACE_KEY_HERE.", false); return; }
+        if (!url || !key) { setMsg("msg-supabase", "Both the Project URL and publishable / anon key are needed — or bake them into the file by replacing sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO.", false); return; }
         if (url.indexOf("https://") !== 0) { setMsg("msg-supabase", "Project URL should start with https:// — copy it from Settings → API in Supabase.", false); return; }
         lsSet(LS_SB_URL, url); lsSet(LS_SB_KEY, key);
         setMsg("msg-supabase", "Connection saved in this browser (override). Testing it now…", true);
@@ -1627,7 +2007,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         $("cloud-list").innerHTML = "";
         refreshCloudStatus();
         if (bakedSb().ready) {
-          setMsg("msg-supabase", "Per-browser override cleared and Auto-sync turned off in this browser — but the baked-in link in this file is still active, so this browser will still show as connected. To fully disconnect everywhere, edit the file and put PLACE_URL_HERE / PLACE_KEY_HERE back, then re-upload.", true);
+          setMsg("msg-supabase", "Per-browser override cleared and Auto-sync turned off in this browser — but the baked-in link in this file is still active, so this browser will still show as connected. To fully disconnect everywhere, edit the file and put https://jwqwdsowcsqbicaldrfs.supabase.co/ / sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO back, then re-upload.", true);
         } else {
           setMsg("msg-supabase", "Disconnected — your data stays in Supabase and in this browser, they just stop syncing until you reconnect.", true);
         }
@@ -1652,6 +2032,8 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
       /* ---------- Init ---------- */
       document.querySelector('#form-txn [name="date"]').value = todayStr();
       document.querySelector('#form-recurring [name="nextDate"]').value = todayStr();
+      $("fc-start").value = todayStr();
+      $("fc-end").value = addDaysStr(todayStr(), 90);
       render();
       setTimeout(function () { sbBootGuard = false; }, 3500);
     </script>
