@@ -1,0 +1,2041 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Personal Finance Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #eef1ec;
+        --surface: #ffffff;
+        --surface-2: #f4f6f2;
+        --ink: #1c2420;
+        --ink-soft: #4c5a52;
+        --ink-faint: #7d8b82;
+        --line: #d9ded6;
+        --accent: #1d6b4f;
+        --accent-strong: #14503a;
+        --accent-soft: #e2efe8;
+        --pos: #1d6b4f;
+        --neg: #b23a2e;
+        --neg-soft: #f9e9e6;
+        --warn: #9a6a12;
+        --warn-soft: #f7efdb;
+        --shadow: 0 1px 2px rgba(20, 40, 30, .06), 0 8px 24px rgba(20, 40, 30, .06);
+        --radius: 10px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #101613;
+          --surface: #1a211d;
+          --surface-2: #212a25;
+          --ink: #e8ede9;
+          --ink-soft: #a9b8ae;
+          --ink-faint: #7d8b82;
+          --line: #2e3a33;
+          --accent: #4cc38a;
+          --accent-strong: #7fd7ab;
+          --accent-soft: #1e3329;
+          --pos: #4cc38a;
+          --neg: #f0857a;
+          --neg-soft: #3a2320;
+          --warn: #e3b959;
+          --warn-soft: #37301c;
+          --shadow: 0 1px 2px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.3);
+        }
+      }
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+        font-size: 16px;
+        line-height: 1.45;
+      }
+      button, [role="button"], select, summary,
+      input:not([type="checkbox"], [type="radio"]) { min-height: 2.25rem; }
+      button { font: inherit; cursor: pointer; }
+      input, select, textarea { font: inherit; color: var(--ink); }
+      .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px 64px; }
+
+      /* ---------- Header / summary ---------- */
+      header.top { padding: 28px 0 6px; }
+      .title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; }
+      h1 {
+        font-family: "Newsreader", Georgia, serif;
+        font-weight: 600; font-size: clamp(1.7rem, 4.5vw, 2.4rem);
+        margin: 0; letter-spacing: -0.01em;
+      }
+      .title-row .sub { color: var(--ink-soft); font-size: .95rem; }
+      .summary {
+        display: grid; grid-template-columns: repeat(4, 1fr);
+        gap: 12px; margin-top: 20px;
+      }
+      .stat {
+        background: var(--surface); border: 1px solid var(--line);
+        border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow);
+      }
+      .stat .label { font-size: .78rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-faint); }
+      .stat .value {
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
+        font-size: clamp(1.15rem, 3.4vw, 1.55rem); font-weight: 600; margin-top: 4px;
+        font-variant-numeric: tabular-nums; white-space: nowrap;
+      }
+      .stat .value.pos { color: var(--pos); }
+      .stat .value.neg { color: var(--neg); }
+
+      /* ---------- Profile / saved bar ---------- */
+      .profile-bar {
+        margin-top: 14px; background: var(--surface); border: 1px solid var(--line);
+        border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px;
+        display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between;
+      }
+      .profile-who { display: flex; align-items: center; gap: 12px; min-width: 0; }
+      .avatar {
+        width: 44px; height: 44px; border-radius: 50%; flex: 0 0 44px;
+        background: var(--accent); color: #fff; display: grid; place-items: center;
+        font-weight: 700; font-size: 1.05rem;
+      }
+      @media (prefers-color-scheme: dark) { .avatar { color: #0c1511; } }
+      .profile-who .pname { font-weight: 700; font-size: 1.02rem; line-height: 1.2; overflow-wrap: anywhere; }
+      .profile-who .pmeta { color: var(--ink-soft); font-size: .86rem; margin-top: 2px; }
+      .save-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--pos); vertical-align: middle; margin-right: 5px; }
+      .profile-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+      .profile-actions select, .profile-actions input {
+        padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--ink); min-height: 40px;
+      }
+      .profile-create { display: none; width: 100%; border-top: 1px solid var(--line); padding-top: 12px; margin-top: 2px; }
+      .profile-create.open { display: block; }
+      .profile-create form { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+      .profile-create label { font-size: .85rem; font-weight: 600; color: var(--ink-soft); display: block; }
+      .profile-create input { display: block; margin-top: 5px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); min-width: min(280px, 78vw); }
+
+      /* ---------- Tabs ---------- */
+      nav.tabs {
+        display: flex; gap: 4px; flex-wrap: wrap; margin: 22px 0 18px;
+        border-bottom: 2px solid var(--line);
+      }
+      nav.tabs button {
+        background: none; border: none; padding: 10px 14px; min-height: 44px;
+        font-weight: 600; color: var(--ink-soft); border-bottom: 3px solid transparent;
+        margin-bottom: -2px; border-radius: 6px 6px 0 0;
+      }
+      nav.tabs button[aria-selected="true"] { color: var(--accent-strong); border-bottom-color: var(--accent); }
+      nav.tabs button:hover { color: var(--ink); background: var(--surface-2); }
+
+      section.panel { display: none; }
+      section.panel.active { display: block; }
+      h2 {
+        font-family: "Newsreader", Georgia, serif; font-weight: 600;
+        font-size: 1.35rem; margin: 0 0 4px;
+      }
+      .panel-intro { color: var(--ink-soft); margin: 0 0 16px; font-size: .95rem; max-width: 62ch; }
+
+      .card {
+        background: var(--surface); border: 1px solid var(--line);
+        border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px;
+      }
+      .card + .card { margin-top: 14px; }
+      .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+
+      /* ---------- Forms ---------- */
+      form .row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      form .row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      label.field { display: block; font-size: .85rem; font-weight: 600; color: var(--ink-soft); margin-bottom: 12px; }
+      label.field input, label.field select {
+        display: block; width: 100%; margin-top: 5px; padding: 8px 10px;
+        background: var(--surface); border: 1px solid var(--line); border-radius: 7px;
+        font-weight: 400; color: var(--ink);
+      }
+      label.field input:focus, label.field select:focus {
+        outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent);
+      }
+      .btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+        background: var(--accent); color: #fff; border: 1px solid var(--accent);
+        border-radius: 8px; padding: 9px 16px; font-weight: 600; min-height: 42px;
+      }
+      @media (prefers-color-scheme: dark) { .btn { color: #0c1511; } }
+      .btn:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+      .btn.ghost { background: transparent; color: var(--accent-strong); }
+      .btn.ghost:hover { background: var(--accent-soft); }
+      .btn.small { min-height: 36px; padding: 5px 12px; font-size: .9rem; }
+      .btn.danger { background: transparent; color: var(--neg); border-color: var(--neg); }
+      .btn.danger:hover { background: var(--neg-soft); }
+      .form-msg { font-size: .9rem; margin-top: 10px; min-height: 1.2em; }
+      .form-msg.ok { color: var(--pos); }
+      .form-msg.err { color: var(--neg); }
+
+      /* ---------- Lists & tables ---------- */
+      .acct-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+      .acct {
+        background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+        padding: 16px; box-shadow: var(--shadow);
+      }
+      .acct .kind { font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-faint); }
+      .acct .name { font-weight: 700; font-size: 1.05rem; margin: 3px 0 2px; overflow-wrap: anywhere; }
+      .acct .bal { font-family: "IBM Plex Mono", monospace; font-size: 1.3rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+      .acct .bal.neg { color: var(--neg); }
+      .acct .meta { color: var(--ink-faint); font-size: .85rem; margin-top: 2px; }
+      .acct .actions { margin-top: 10px; display: flex; gap: 8px; }
+
+      table.ledger { width: 100%; border-collapse: collapse; font-size: .95rem; }
+      table.ledger th {
+        text-align: left; font-size: .76rem; letter-spacing: .04em; text-transform: uppercase;
+        color: var(--ink-faint); padding: 8px 10px; border-bottom: 2px solid var(--line);
+      }
+      table.ledger td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+      table.ledger td.amt, table.ledger th.amt { text-align: right; font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+      td.amt.pos { color: var(--pos); font-weight: 600; }
+      td.amt.neg { color: var(--neg); font-weight: 600; }
+      .tag {
+        display: inline-block; background: var(--surface-2); border: 1px solid var(--line);
+        border-radius: 999px; padding: 1px 9px; font-size: .8rem; color: var(--ink-soft); white-space: nowrap;
+      }
+      .clr-btn {
+        border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-faint);
+        border-radius: 999px; padding: 3px 10px; font-size: .78rem; font-weight: 600; min-height: 32px;
+      }
+      .clr-btn.on { background: var(--accent-soft); color: var(--accent-strong); border-color: var(--accent); }
+      .icon-btn {
+        background: none; border: none; color: var(--ink-faint); padding: 6px 8px; min-height: 36px; min-width: 36px;
+        border-radius: 6px; font-size: .85rem; font-weight: 600;
+      }
+      .icon-btn:hover { color: var(--neg); background: var(--neg-soft); }
+      .empty {
+        border: 1.5px dashed var(--line); border-radius: var(--radius);
+        padding: 28px 20px; text-align: center; color: var(--ink-soft); background: var(--surface-2);
+      }
+      .empty strong { color: var(--ink); display: block; font-size: 1.02rem; margin-bottom: 4px; }
+
+      .filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+      .filters input[type="search"], .filters select {
+        padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface);
+      }
+      .filters input[type="search"] { flex: 1 1 200px; }
+
+      /* ---------- Budgets ---------- */
+      .budget-row { padding: 12px 0; border-bottom: 1px solid var(--line); }
+      .budget-row:last-child { border-bottom: none; }
+      .budget-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+      .budget-head .cat { font-weight: 700; }
+      .budget-head .nums { font-family: "IBM Plex Mono", monospace; font-size: .9rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+      .bar { height: 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; margin-top: 7px; }
+      .bar > div { height: 100%; background: var(--accent); border-radius: 999px; }
+      .bar > div.over { background: var(--neg); }
+      .bar > div.near { background: var(--warn); }
+      .budget-note { font-size: .85rem; margin-top: 5px; color: var(--ink-soft); }
+      .budget-note.over { color: var(--neg); font-weight: 600; }
+
+      /* ---------- Recurring / reports ---------- */
+      .rec-row, .rep-row {
+        display: flex; justify-content: space-between; align-items: center; gap: 12px;
+        padding: 11px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap;
+      }
+      .rec-row:last-child, .rep-row:last-child { border-bottom: none; }
+      .rec-main { min-width: 0; }
+      .rec-main .desc { font-weight: 600; overflow-wrap: anywhere; }
+      .rec-main .meta { color: var(--ink-faint); font-size: .86rem; }
+      .due { font-size: .8rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); white-space: nowrap; }
+      .due.future { background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--line); }
+      .rep-row .k { color: var(--ink-soft); }
+      .rep-row .v { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-variant-numeric: tabular-nums; }
+      .chart-box { overflow-x: auto; }
+      svg text { font-family: "Public Sans", sans-serif; }
+
+      .cat-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+      .backup-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+      .fineprint { color: var(--ink-soft); font-size: .9rem; max-width: 68ch; }
+      .fineprint code { font-family: "IBM Plex Mono", monospace; font-size: .85em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+      ol.hosting { color: var(--ink-soft); max-width: 68ch; padding-left: 1.3em; }
+      ol.hosting li { margin-bottom: 6px; }
+      ol.hosting strong { color: var(--ink); }
+
+      .cloud-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background: var(--ink-faint); vertical-align:middle; margin-right:4px; }
+      .cloud-dot.on { background: var(--pos); }
+      .cloud-dot.syncing { background: var(--warn); }
+      .cloud-dot.error { background: var(--neg); }
+      .baked-box { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; }
+      .baked-box strong { color: var(--accent-strong); }
+      .baked-box code { font-family: "IBM Plex Mono", monospace; font-size: .85em; background: var(--surface); border: 1px solid var(--line); padding: 1px 6px; border-radius: 4px; overflow-wrap: anywhere; }
+      .baked-box.warn { background: var(--warn-soft); border-color: var(--warn); }
+      .baked-box.warn strong { color: var(--warn); }
+      .code-block {
+        background: var(--surface-2); border:1px solid var(--line); border-radius:8px;
+        padding:14px; font-family:"IBM Plex Mono",monospace; font-size:.82rem; line-height:1.55;
+        white-space:pre-wrap; overflow-wrap:anywhere; overflow-x:auto; color:var(--ink);
+        max-height:320px; overflow-y:auto;
+      }
+      .steps { display:grid; gap:14px; }
+      .step { display:flex; gap:14px; align-items:flex-start; }
+      .step-num {
+        width:30px; height:30px; border-radius:50%; background:var(--accent); color:#fff;
+        display:grid; place-items:center; font-weight:700; font-size:.9rem; flex:0 0 30px; margin-top:2px;
+      }
+      @media (prefers-color-scheme: dark){ .step-num{ color:#0c1511; } }
+      .step-body { flex:1; min-width:0; }
+      .step-body strong { display:block; margin-bottom:2px; }
+      .step-body p { margin:0; color:var(--ink-soft); font-size:.93rem; }
+      .sync-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+      @media (max-width:760px){ .sync-grid{ grid-template-columns:1fr; } }
+      .cloud-profile-row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+      .cloud-profile-row:last-child{ border-bottom:none; }
+
+      /* ---------- Forecast / pay periods ---------- */
+      .fc-controls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end; margin-bottom: 6px; }
+      .fc-controls label.field { margin-bottom: 0; }
+      .fc-controls label.field select, .fc-controls label.field input { min-width: 150px; }
+      .fc-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 14px 0 4px; }
+      @media (max-width: 760px) { .fc-stats { grid-template-columns: repeat(2, 1fr); } }
+      .fc-note { color: var(--ink-soft); font-size: .88rem; margin: 8px 0 0; }
+      .period-hero {
+        background: var(--accent-soft); border-radius: var(--radius);
+        padding: 16px 18px; margin-bottom: 6px;
+      }
+      .period-hero .p-when { font-weight: 700; font-size: 1.05rem; }
+      .period-hero .p-sub { color: var(--ink-soft); font-size: .9rem; margin-top: 2px; }
+      .period-hero .p-nums {
+        display: flex; flex-wrap: wrap; gap: 6px 22px; margin-top: 10px;
+        font-family: "IBM Plex Mono", monospace; font-size: .95rem; font-variant-numeric: tabular-nums;
+      }
+      .period-hero .p-nums b { font-weight: 600; }
+      .period-block { padding: 14px 0 4px; border-top: 1px solid var(--line); }
+      .period-block:first-of-type { border-top: none; }
+      .period-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+      .period-head .p-when { font-weight: 700; }
+      .period-head .p-left { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-variant-numeric: tabular-nums; }
+      .period-head .p-left.neg { color: var(--neg); }
+      .period-exp {
+        display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+        padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: .94rem;
+      }
+      .period-exp:last-child { border-bottom: none; }
+      .period-exp .pe-main { min-width: 0; overflow-wrap: anywhere; }
+      .period-exp .pe-date { color: var(--ink-faint); font-size: .85rem; white-space: nowrap; }
+      .period-exp .pe-amt { font-family: "IBM Plex Mono", monospace; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+      .period-total { display: flex; justify-content: space-between; gap: 12px; padding-top: 8px; font-size: .94rem; color: var(--ink-soft); }
+      .period-total .pe-amt { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-variant-numeric: tabular-nums; }
+      footer { margin-top: 40px; color: var(--ink-faint); font-size: .85rem; text-align: center; }
+
+      @media (max-width: 760px) {
+        .summary { grid-template-columns: repeat(2, 1fr); }
+        .grid-2 { grid-template-columns: 1fr; }
+        form .row, form .row-3 { grid-template-columns: 1fr; }
+        table.ledger thead { display: none; }
+        table.ledger, table.ledger tbody, table.ledger tr, table.ledger td { display: block; width: 100%; }
+        table.ledger tr { border-bottom: 2px solid var(--line); padding: 8px 0; }
+        table.ledger td { border-bottom: none; padding: 3px 10px; }
+        table.ledger td.amt { text-align: left; font-size: 1.05rem; }
+        nav.tabs button { padding: 10px 10px; font-size: .95rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="top">
+        <div class="title-row">
+          <h1>Personal Finance Tracker</h1>
+          <span class="sub">A KMyMoney-style ledger that runs entirely in this one file.</span>
+        </div>
+        <div class="summary" role="region" aria-label="Account summary">
+          <div class="stat"><div class="label">Net worth</div><div class="value" id="sum-net">$0.00</div></div>
+          <div class="stat"><div class="label">Assets</div><div class="value pos" id="sum-assets">$0.00</div></div>
+          <div class="stat"><div class="label">Debts</div><div class="value neg" id="sum-debts">$0.00</div></div>
+          <div class="stat"><div class="label">This month (net)</div><div class="value" id="sum-month">$0.00</div></div>
+        </div>
+
+        <div class="profile-bar" aria-label="Your profile and saved data">
+          <div class="profile-who">
+            <div class="avatar" id="profile-avatar" aria-hidden="true">M</div>
+            <div>
+              <div class="pname" id="profile-name">My Finances</div>
+              <div class="pmeta"><span class="save-dot" aria-hidden="true"></span><span id="save-status">Saved in this browser</span> · <span id="profile-counts">0 accounts · 0 transactions</span><br><span class="cloud-dot" id="cloud-dot" aria-hidden="true"></span><span id="cloud-status">Cloud: Not connected — set up Supabase in the Cloud Sync tab</span></div>
+            </div>
+          </div>
+          <div class="profile-actions">
+            <label class="sr-only" for="profile-select" style="position:absolute;left:-9999px">Switch profile</label>
+            <select id="profile-select" aria-label="Switch profile"></select>
+            <button class="btn ghost small" id="btn-new-profile" type="button">+ New profile</button>
+            <button class="btn ghost small" id="btn-delete-profile" type="button">Delete profile</button>
+          </div>
+          <div class="profile-create" id="profile-create">
+            <form id="form-profile">
+              <label>Profile name
+                <input name="name" id="new-profile-name" maxlength="40" required placeholder="e.g. Household, Side business, Ibrahim" />
+              </label>
+              <button class="btn small" type="submit">Create &amp; switch</button>
+              <button class="btn ghost small" id="btn-cancel-profile" type="button">Cancel</button>
+            </form>
+            <p class="fineprint" style="margin:8px 0 0">Profiles live only in this browser on this device — no email, no password, nothing sent to a server. Each profile keeps its own accounts, ledger, and budgets separate. Use Export backup in the Backup tab to move a profile to another device.</p>
+            <div class="form-msg" id="msg-profile" role="status"></div>
+          </div>
+        </div>
+      </header>
+
+      <nav class="tabs" role="tablist" aria-label="Sections">
+        <button role="tab" aria-selected="true" data-tab="accounts">Accounts</button>
+        <button role="tab" aria-selected="false" data-tab="ledger">Ledger</button>
+        <button role="tab" aria-selected="false" data-tab="budgets">Budgets</button>
+        <button role="tab" aria-selected="false" data-tab="recurring">Recurring</button>
+        <button role="tab" aria-selected="false" data-tab="forecast">Forecast</button>
+        <button role="tab" aria-selected="false" data-tab="reports">Reports</button>
+        <button role="tab" aria-selected="false" data-tab="sync">Cloud Sync</button>
+        <button role="tab" aria-selected="false" data-tab="backup">Backup &amp; Download</button>
+      </nav>
+
+      <!-- ============ ACCOUNTS ============ -->
+      <section class="panel active" id="panel-accounts" role="tabpanel">
+        <h2>Accounts</h2>
+        <p class="panel-intro">Chequing, savings, credit cards, cash, investments, loans — each balance updates live from the ledger. For debts (credit cards, loans), enter what you owe as a negative opening balance.</p>
+        <div class="acct-list" id="acct-list"></div>
+        <div class="empty" id="acct-empty">
+          <strong>No accounts yet</strong>
+          Add your first account below — a chequing account is a good place to start.
+        </div>
+        <div class="card" style="margin-top:14px">
+          <h2 style="font-size:1.1rem">Add an account</h2>
+          <form id="form-account">
+            <div class="row-3">
+              <label class="field">Account name
+                <input name="name" required maxlength="60" placeholder="e.g. Everyday Chequing" />
+              </label>
+              <label class="field">Type
+                <select name="type">
+                  <option>Chequing</option><option>Savings</option><option>Credit Card</option>
+                  <option>Cash</option><option>Investment</option><option>Loan</option><option>Other</option>
+                </select>
+              </label>
+              <label class="field">Opening balance ($)
+                <input name="opening" type="number" step="0.01" value="0" required />
+              </label>
+            </div>
+            <button class="btn" type="submit">Add account</button>
+            <div class="form-msg" id="msg-account" role="status"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ============ LEDGER ============ -->
+      <section class="panel" id="panel-ledger" role="tabpanel">
+        <h2>Ledger</h2>
+        <p class="panel-intro">Every income, expense, and transfer. Mark entries cleared once they show up on your bank statement.</p>
+        <div class="card">
+          <h2 style="font-size:1.1rem">Add a transaction</h2>
+          <form id="form-txn">
+            <div class="row-3">
+              <label class="field">Date
+                <input name="date" type="date" required />
+              </label>
+              <label class="field">Type
+                <select name="kind" id="txn-kind">
+                  <option value="expense">Expense</option>
+                  <option value="income">Income</option>
+                  <option value="transfer">Transfer</option>
+                </select>
+              </label>
+              <label class="field">Amount ($)
+                <input name="amount" type="number" step="0.01" min="0.01" required placeholder="0.00" />
+              </label>
+            </div>
+            <div class="row-3">
+              <label class="field" id="field-account">Account
+                <select name="account" id="txn-account"></select>
+              </label>
+              <label class="field" id="field-to" style="display:none">To account
+                <select name="toAccount" id="txn-to"></select>
+              </label>
+              <label class="field" id="field-category">Category
+                <select name="category" id="txn-category"></select>
+              </label>
+              <label class="field">Payee / description
+                <input name="payee" maxlength="80" placeholder="e.g. Loblaws, Paycheque, Hydro bill" />
+              </label>
+            </div>
+            <button class="btn" type="submit">Add transaction</button>
+            <div class="form-msg" id="msg-txn" role="status"></div>
+          </form>
+        </div>
+        <div class="card">
+          <div class="filters">
+            <input type="search" id="flt-search" placeholder="Search payee or category…" aria-label="Search transactions" />
+            <select id="flt-account" aria-label="Filter by account"><option value="">All accounts</option></select>
+            <select id="flt-month" aria-label="Filter by month"><option value="">All months</option></select>
+          </div>
+          <div id="ledger-wrap">
+            <table class="ledger" aria-label="Transactions">
+              <thead><tr>
+                <th>Date</th><th>Payee</th><th>Account</th><th>Category</th><th>Status</th><th class="amt">Amount</th><th></th>
+              </tr></thead>
+              <tbody id="ledger-body"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="ledger-empty">
+            <strong>Nothing here yet</strong>
+            Add a transaction above, or loosen the filters if you were expecting to see entries.
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ BUDGETS ============ -->
+      <section class="panel" id="panel-budgets" role="tabpanel">
+        <h2>Monthly budgets</h2>
+        <p class="panel-intro">Set a monthly limit per spending category. Bars track the current month and turn amber as you approach the limit, red when you pass it.</p>
+        <div class="card" id="budget-list-card">
+          <div id="budget-list"></div>
+          <div class="empty" id="budget-empty">
+            <strong>No budgets set</strong>
+            Pick a category below and give it a monthly limit.
+          </div>
+        </div>
+        <div class="card">
+          <h2 style="font-size:1.1rem">Set a budget</h2>
+          <form id="form-budget">
+            <div class="row">
+              <label class="field">Category
+                <select name="category" id="budget-category"></select>
+              </label>
+              <label class="field">Monthly limit ($)
+                <input name="limit" type="number" step="0.01" min="0.01" required placeholder="0.00" />
+              </label>
+            </div>
+            <button class="btn" type="submit">Save budget</button>
+            <div class="form-msg" id="msg-budget" role="status"></div>
+          </form>
+          <h2 style="font-size:1.1rem; margin-top:22px">Categories</h2>
+          <p class="fineprint" style="margin:0 0 6px">Built-in categories plus any you add. New categories appear in the transaction and budget menus.</p>
+          <div class="cat-chips" id="cat-chips"></div>
+          <form id="form-category" style="margin-top:12px">
+            <div class="row">
+              <label class="field">New category name
+                <input name="name" maxlength="40" required placeholder="e.g. Pet supplies" />
+              </label>
+              <label class="field">Kind
+                <select name="kind"><option value="expense">Expense</option><option value="income">Income</option></select>
+              </label>
+            </div>
+            <button class="btn ghost" type="submit">Add category</button>
+            <div class="form-msg" id="msg-category" role="status"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ============ RECURRING ============ -->
+      <section class="panel" id="panel-recurring" role="tabpanel">
+        <h2>Recurring transactions</h2>
+        <p class="panel-intro">Rent, subscriptions, paycheques — set them up once, then post each one to the ledger with a single tap when it comes due.</p>
+        <div class="card">
+          <div id="rec-list"></div>
+          <div class="empty" id="rec-empty">
+            <strong>No recurring transactions</strong>
+            Add one below — it will sit here until you post it.
+          </div>
+        </div>
+        <div class="card">
+          <h2 style="font-size:1.1rem">Add a recurring transaction</h2>
+          <form id="form-recurring">
+            <div class="row-3">
+              <label class="field">Description
+                <input name="payee" maxlength="80" required placeholder="e.g. Rent, Netflix, Paycheque" />
+              </label>
+              <label class="field">Type
+                <select name="kind"><option value="expense">Expense</option><option value="income">Income</option></select>
+              </label>
+              <label class="field">Amount ($)
+                <input name="amount" type="number" step="0.01" min="0.01" required placeholder="0.00" />
+              </label>
+            </div>
+            <div class="row-3">
+              <label class="field">Account
+                <select name="account" id="rec-account"></select>
+              </label>
+              <label class="field">Category
+                <select name="category" id="rec-category"></select>
+              </label>
+              <label class="field">Frequency
+                <select name="freq">
+                  <option value="weekly">Weekly</option>
+                  <option value="biweekly">Every 2 weeks</option>
+                  <option value="monthly" selected>Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </label>
+            </div>
+            <div class="row">
+              <label class="field">First / next date
+                <input name="nextDate" type="date" required />
+              </label>
+            </div>
+            <button class="btn" type="submit">Add recurring</button>
+            <div class="form-msg" id="msg-recurring" role="status"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ============ FORECAST ============ -->
+      <section class="panel" id="panel-forecast" role="tabpanel">
+        <h2>Forecast &amp; pay periods</h2>
+        <p class="panel-intro">Project your balance over any timeframe you pick, using your current balances plus your recurring income and bills — and see exactly which expenses land between one payday and the next.</p>
+
+        <div class="card">
+          <h2 style="font-size:1.1rem">Balance projection</h2>
+          <p class="fineprint" style="margin:2px 0 14px">Pick a timeframe and the balance is projected day by day: every recurring transaction that falls inside it is applied on its due date, along with any ledger entries already dated inside it.</p>
+          <div class="fc-controls">
+            <label class="field">Timeframe
+              <select id="fc-range">
+                <option value="30">Next 30 days</option>
+                <option value="60">Next 60 days</option>
+                <option value="90" selected>Next 90 days</option>
+                <option value="180">Next 6 months</option>
+                <option value="365">Next 12 months</option>
+                <option value="custom">Custom dates…</option>
+              </select>
+            </label>
+            <label class="field">From
+              <input type="date" id="fc-start" />
+            </label>
+            <label class="field" id="fc-end-wrap" style="display:none">To
+              <input type="date" id="fc-end" />
+            </label>
+            <label class="field">Account
+              <select id="fc-account"><option value="">All accounts (total)</option></select>
+            </label>
+          </div>
+          <div class="fc-stats">
+            <div class="stat"><div class="label">Projected balance</div><div class="value" id="fc-end-bal">$0.00</div></div>
+            <div class="stat"><div class="label">Net change</div><div class="value" id="fc-net">$0.00</div></div>
+            <div class="stat"><div class="label">Income in period</div><div class="value pos" id="fc-inc">$0.00</div></div>
+            <div class="stat"><div class="label">Expenses in period</div><div class="value neg" id="fc-exp">$0.00</div></div>
+          </div>
+          <p class="fc-note" id="fc-lowest"></p>
+          <div class="chart-box" id="fc-chart" style="margin-top:10px"></div>
+          <div id="fc-events-wrap" style="margin-top:14px">
+            <table class="ledger" aria-label="Projected transactions">
+              <thead><tr>
+                <th>Date</th><th>Description</th><th>Category</th><th>Source</th><th class="amt">Amount</th><th class="amt">Balance</th>
+              </tr></thead>
+              <tbody id="fc-events"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="fc-empty" style="display:none">
+            <strong>Nothing projected in this timeframe</strong>
+            No recurring transactions or dated ledger entries fall inside it. Add recurring bills and paycheques in the Recurring tab and they'll show up here.
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 style="font-size:1.1rem">Between pays — what's due before your next payday</h2>
+          <p class="fineprint" style="margin:2px 0 14px">Pick which recurring income is your pay. Each block below runs from one payday to the day before the next, and lists every recurring expense that lands in between — so you can see what's spoken for before the money even arrives.</p>
+          <div class="fc-controls">
+            <label class="field">My pay is
+              <select id="fc-pay-source"></select>
+            </label>
+          </div>
+          <div id="pay-periods"></div>
+          <div class="empty" id="pay-empty" style="display:none">
+            <strong>No recurring pay found</strong>
+            Add your paycheque as a recurring <em>income</em> transaction in the Recurring tab (e.g. “Paycheque”, every 2 weeks), and this view will line your bills up between paydays.
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ REPORTS ============ -->
+      <section class="panel" id="panel-reports" role="tabpanel">
+        <h2>Reports</h2>
+        <p class="panel-intro">Where the money went this month, and how the last six months compare. Transfers between your own accounts are excluded so the numbers reflect real income and spending.</p>
+        <div class="grid-2">
+          <div class="card">
+            <h2 style="font-size:1.1rem" id="rep-month-title">This month</h2>
+            <div id="rep-summary"></div>
+          </div>
+          <div class="card">
+            <h2 style="font-size:1.1rem">Top spending categories</h2>
+            <div id="rep-cats"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2 style="font-size:1.1rem">Cash flow — last 6 months</h2>
+          <div class="chart-box" id="rep-chart"></div>
+        </div>
+      </section>
+
+      <!-- ============ CLOUD SYNC (SUPABASE) ============ -->
+      <section class="panel" id="panel-sync" role="tabpanel">
+        <h2>Cloud Sync — Supabase</h2>
+        <p class="panel-intro">Put your data in a real database, separate from this HTML file. Once connected, editing or re-uploading <code>index.html</code> on GitHub / Netlify will <strong>not</strong> lose your data — it loads from Supabase. It also syncs the same profile between phone and PC. Your browser copy stays as an offline cache.</p>
+
+        <div class="baked-box warn" id="baked-box">
+          <strong id="baked-title">⚠ One-time setup inside this file — replace “place key here”</strong>
+          <p class="fineprint" style="margin:6px 0 0" id="baked-detail">This copy has placeholders baked in so <em>any</em> browser that opens it points at the same database — no pasting the key on each device. Open <code>index.html</code> in a text editor (Notepad / VS Code), search for <code>https://jwqwdsowcsqbicaldrfs.supabase.co/</code> and <code>sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO</code> near the top of the script, and replace them once: <code>https://jwqwdsowcsqbicaldrfs.supabase.co/</code> → your Project URL like <code>https://abcd1234.supabase.co</code>, and <code>sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO</code> → your <strong>publishable / anon key</strong> (the long <code>eyJ…</code> one — <em>never</em> the secret key). Save, re-upload that one file to Git / Netlify, and every device is connected automatically. Keep the repo / Netlify site private, since anyone who can open the file can see the publishable key.</p>
+        </div>
+
+        <div class="card">
+          <h2 style="font-size:1.1rem">How it works</h2>
+          <div class="steps" style="margin-top:12px">
+            <div class="step"><div class="step-num">1</div><div class="step-body"><strong>Create a free Supabase project</strong><p>Go to <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a> → New project. Pick any name (e.g. <em>finance-tracker</em>) and a region near you. Wait ~1 minute for it to provision. Free tier is enough.</p></div></div>
+            <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Create the table — run this SQL once</strong><p>In Supabase: left sidebar → <strong>SQL Editor</strong> → New query → paste the SQL below → Run. You only do this once.</p></div></div>
+            <div class="step"><div class="step-num">3</div><div class="step-body"><strong>Bake the link into the file (recommended) — or paste it below</strong><p><strong>Baked-in way (do this once, works on every device):</strong> edit <code>index.html</code>, replace <code>https://jwqwdsowcsqbicaldrfs.supabase.co/</code> with your Project URL and <code>sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO</code> with your publishable / anon key from Supabase <strong>Settings → API</strong>, save and re-upload. Any browser opening that file is already connected and auto-syncs — nothing to paste on your phone or work PC again. <strong>Per-browser way (fallback):</strong> paste the same URL + key in the Connection form below and tap Save connection — that only saves in this browser.</p></div></div>
+            <div class="step"><div class="step-num">4</div><div class="step-body"><strong>Push, then pull on your other device</strong><p>Tap <strong>Push to cloud</strong> here. On your other device just open the same site (with the baked-in file) and tap <strong>Pull from cloud</strong> — no setup needed there. With a baked-in connection, Auto-sync is on by default and pushes a few seconds after every change.</p></div></div>
+          </div>
+          <h2 style="font-size:1rem; margin-top:20px">SQL to run in Supabase</h2>
+          <div class="code-block" id="sb-sql">create table if not exists public.finance_tracker_data (
+  id text primary key,
+  profile_name text,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.finance_tracker_data enable row level security;
+
+drop policy if exists "pft anon select" on public.finance_tracker_data;
+drop policy if exists "pft anon insert" on public.finance_tracker_data;
+drop policy if exists "pft anon update" on public.finance_tracker_data;
+drop policy if exists "pft anon delete" on public.finance_tracker_data;
+
+create policy "pft anon select" on public.finance_tracker_data for select using (true);
+create policy "pft anon insert" on public.finance_tracker_data for insert with check (true);
+create policy "pft anon update" on public.finance_tracker_data for update using (true) with check (true);
+create policy "pft anon delete" on public.finance_tracker_data for delete using (true);</div>
+          <div class="backup-actions">
+            <button class="btn ghost small" id="btn-copy-sql" type="button">Copy SQL</button>
+            <a class="btn ghost small" href="https://supabase.com/dashboard" target="_blank" rel="noopener" style="text-decoration:none">Open Supabase dashboard →</a>
+          </div>
+          <p class="fineprint" style="margin-top:10px">Security note: these policies let anyone with your anon / publishable key read/write this one table. That's fine for the non-sensitive setup you described (amounts, categories, profile names — no bank logins, account numbers, or passwords). Don't put sensitive info in payee names if you share the key. <strong>Never</strong> bake in or share the secret / service_role key. If you baked the publishable key into this file, keep the Git repo and Netlify site private.</p>
+        </div>
+
+        <div class="card">
+          <h2 style="font-size:1.1rem">Connection</h2>
+          <p class="fineprint" id="connection-note" style="margin:0 0 12px">If you already replaced <code>sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO</code> in the file, you're connected — you can leave this form blank. Use this form only as a per-browser override / fallback.</p>
+          <form id="form-supabase">
+            <label class="field">Supabase Project URL
+              <input name="url" id="sb-url" type="url" placeholder="https://abcdefghijk.supabase.co" autocomplete="off" spellcheck="false" />
+            </label>
+            <label class="field">Supabase publishable / anon key — place key here if using this form
+              <input name="key" id="sb-key" type="password" placeholder="eyJhbGciOi… (publishable key — never the secret key)" autocomplete="off" spellcheck="false" />
+            </label>
+            <div class="backup-actions" style="margin-top:2px">
+              <button class="btn" type="submit">Save connection</button>
+              <button class="btn ghost" id="btn-test-sb" type="button">Test connection</button>
+              <button class="btn ghost" id="btn-toggle-key" type="button">Show key</button>
+              <button class="btn danger" id="btn-disconnect-sb" type="button">Disconnect</button>
+            </div>
+            <div class="form-msg" id="msg-supabase" role="status"></div>
+          </form>
+          <div style="border-top:1px solid var(--line); margin-top:16px; padding-top:16px">
+            <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between">
+              <div>
+                <strong id="sb-status-title">Not connected</strong>
+                <div class="fineprint" id="sb-status-detail" style="margin-top:2px">Add your URL + key above to enable database sync.</div>
+              </div>
+              <button class="btn ghost small" id="btn-autosync" type="button">Auto-sync: Off</button>
+            </div>
+            <div class="backup-actions" style="margin-top:14px">
+              <button class="btn" id="btn-push-cloud" type="button">↑ Push this profile to cloud</button>
+              <button class="btn ghost" id="btn-pull-cloud" type="button">↓ Pull this profile from cloud</button>
+              <button class="btn ghost" id="btn-refresh-cloud" type="button">List profiles in cloud</button>
+            </div>
+            <div class="form-msg" id="msg-sync" role="status"></div>
+            <div id="cloud-list"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 style="font-size:1.1rem">What syncs, what doesn't</h2>
+          <p class="fineprint" style="margin:0">Each local profile syncs as one row in <code>finance_tracker_data</code>, keyed by its profile ID, with the full JSON (accounts, transactions, budgets, recurring, categories) in the <code>data</code> column. If the same profile exists in the cloud with a newer <code>updated_at</code>, Pull will show you the cloud date before overwriting. Push always overwrites the cloud copy with what's on screen. If you use two different profile names on two devices, they'll be two separate rows — use <em>List profiles in cloud</em> to pull a profile created elsewhere onto this device.</p>
+        </div>
+      </section>
+
+      <!-- ============ BACKUP & DOWNLOAD ============ -->
+      <section class="panel" id="panel-backup" role="tabpanel">
+        <h2>Backup &amp; download</h2>
+        <p class="panel-intro">Your entries auto-save in this browser under your current profile. If you've connected Supabase in the Cloud Sync tab, they also save to your database — that's the copy that survives editing the HTML and syncs between devices. Export a JSON backup regularly as an extra safety net.</p>
+        <div class="card">
+          <h2 style="font-size:1.1rem">Your data — <span id="backup-profile-name">My Finances</span></h2>
+          <div class="backup-actions">
+            <button class="btn" id="btn-export-json" type="button">Export backup (.json)</button>
+            <button class="btn ghost" id="btn-export-csv" type="button">Export transactions (.csv)</button>
+            <label class="btn ghost" for="import-file" style="margin:0">Import backup…</label>
+            <input type="file" id="import-file" accept=".json,application/json" hidden />
+          </div>
+          <div class="form-msg" id="msg-backup" role="status"></div>
+          <p class="fineprint">The JSON backup contains everything for the current profile — accounts, transactions, budgets, recurring items, and categories. The CSV is a spreadsheet-friendly copy of the ledger. Importing a backup replaces what's in the current profile and auto-saves over it. To keep profiles separate on another device, export each profile before you switch.</p>
+        </div>
+        <div class="card">
+          <h2 style="font-size:1.1rem">Take this file with you</h2>
+          <p class="fineprint">Download a copy of this tracker as a single <code>index.html</code> — with the current profile's data baked in — ready to commit to a Git repository or drop onto a static host. If you replaced <code>https://jwqwdsowcsqbicaldrfs.supabase.co/</code> / <code>sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO</code> in this file, that baked-in Supabase link travels with the download, so any browser opening it connects automatically. If you only pasted the key in the Cloud Sync form (per-browser), it is <strong>not</strong> baked into the download — either bake it in as above, or reconnect once per browser after you deploy. Editing and re-uploading this file does not touch your Supabase data.</p>
+          <div class="backup-actions">
+            <button class="btn" id="btn-download-html" type="button">Download index.html</button>
+          </div>
+          <h2 style="font-size:1.1rem; margin-top:22px">Hosting it yourself</h2>
+          <ol class="hosting">
+            <li><strong>GitHub:</strong> create a repository, add the downloaded file as <code>index.html</code>, then enable GitHub Pages (Settings → Pages → deploy from the main branch) to get a public URL.</li>
+            <li><strong>Netlify:</strong> drag the folder containing <code>index.html</code> onto Netlify's Sites page — it deploys instantly. You can host as many separate sites as you like on the free plan, so this and your geo tool can live side by side, each with its own URL.</li>
+            <li><strong>Editing at work:</strong> edit the file in the GitHub web editor or push changes from any machine; the host redeploys automatically. With Supabase connected, your data lives in the database — redeploying the HTML won't lose it. Without Supabase, each browser keeps its own copy, so use export/import to move books between devices.</li>
+            <li><strong>Supabase + Netlify/GitHub (baked-in):</strong> before you upload, edit <code>index.html</code> once — replace <code>https://jwqwdsowcsqbicaldrfs.supabase.co/</code> and <code>sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO</code> (search for “place key here” in the file) with your Project URL and publishable key. Upload that file. Every device that opens the live URL is already connected — no setup on phone or work PC — just Pull once on a new device to load your profiles. Keep the repo / site private.</li>
+          </ol>
+        </div>
+      </section>
+
+      <footer>All amounts in Canadian dollars (CAD). Saved in this browser, and in your Supabase database when Cloud Sync is connected. Export a backup to keep an extra copy elsewhere.</footer>
+    </div>
+
+    <script>
+      "use strict";
+      /* ============================================================
+         ★★★  BAKED-IN SUPABASE CONNECTION — EDIT THESE 2 LINES  ★★★
+         ============================================================
+         This is the "place key here" spot. Replace the two
+         placeholders below ONCE, save the file, and re-upload it
+         to Git / Netlify. After that, ANY browser that opens this
+         file points at the same database automatically — no
+         pasting the key on your phone, work PC, or any other
+         device again, and Auto-sync will be on by default.
+
+           1) https://jwqwdsowcsqbicaldrfs.supabase.co/  ->  your Supabase Project URL
+              Example: "https://abcdefghijklm.supabase.co"
+              Find it in Supabase: Settings -> API -> Project URL
+
+           2) sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO  ->  your PUBLISHABLE / anon key
+              The long key starting with "eyJ..." in
+              Supabase: Settings -> API -> publishable / anon key
+
+         ⚠ Use ONLY the publishable / anon key here.
+           NEVER put the secret / service_role key in this file.
+           Keep the Git repo and Netlify site private, because
+           anyone who can open this file can see the publishable
+           key below (that's normal for this key — it's made to
+           live in browser code — but private keeps it tidy).
+
+         The SQL table setup in Supabase is still one-time only:
+         you run it once ever in Supabase -> SQL Editor, not on
+         each device. See the Cloud Sync tab in the page.
+         ============================================================ */
+      var BAKED_SUPABASE_URL = "https://jwqwdsowcsqbicaldrfs.supabase.co/"; // <-- place URL here
+      var BAKED_SUPABASE_KEY = "sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO"; // <-- place key here
+      /* ============================================================
+         End of baked-in connection — everything below is the app.
+         ============================================================ */
+
+      /* ---------- State ---------- */
+      var DEFAULT_CATEGORIES = [
+        { name: "Groceries", kind: "expense" }, { name: "Dining out", kind: "expense" },
+        { name: "Housing", kind: "expense" }, { name: "Utilities", kind: "expense" },
+        { name: "Transport", kind: "expense" }, { name: "Fuel", kind: "expense" },
+        { name: "Insurance", kind: "expense" }, { name: "Health", kind: "expense" },
+        { name: "Entertainment", kind: "expense" }, { name: "Subscriptions", kind: "expense" },
+        { name: "Shopping", kind: "expense" }, { name: "Travel", kind: "expense" },
+        { name: "Fees & interest", kind: "expense" }, { name: "Other expense", kind: "expense" },
+        { name: "Paycheque", kind: "income" }, { name: "Side income", kind: "income" },
+        { name: "Interest & dividends", kind: "income" }, { name: "Refund", kind: "income" },
+        { name: "Other income", kind: "income" }
+      ];
+      /* ---------- Local profiles & auto-save (this browser only) ---------- */
+      var LS_PROFILES = "pft_static_profiles_v1";
+      var LS_ACTIVE = "pft_static_active_v1";
+      var LS_DATA_PREFIX = "pft_static_data_v1_";
+      var LS_SEED_SEEN = "pft_static_seed_seen_v1";
+      var LS_SB_URL = "pft_static_sb_url_v1";
+      var LS_SB_KEY = "pft_static_sb_key_v1";
+      var LS_SB_AUTO = "pft_static_sb_auto_v1";
+      var LS_SB_LAST = "pft_static_sb_last_v1_"; /* + profileId -> ISO string */
+      var sbPushTimer = null;
+      var sbSyncing = false;
+      var sbPulling = false;
+      var sbBootGuard = true; /* Suppress auto-push on first load so a fresh/empty browser opening the baked-in file doesn't overwrite the cloud copy before the user Pulls. Cleared a few seconds after init. */
+      var storageOk = true;
+      function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { storageOk = false; return null; } }
+      function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { storageOk = false; } }
+      function lsDel(k) { try { localStorage.removeItem(k); } catch (e) { storageOk = false; } }
+      try { localStorage.setItem("__pft_test__", "1"); localStorage.removeItem("__pft_test__"); } catch (e) { storageOk = false; }
+      function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+      function blankState() {
+        return { accounts: [], transactions: [], budgets: {}, recurring: [], categories: DEFAULT_CATEGORIES.slice() };
+      }
+      function stateFrom(obj) {
+        var st = blankState();
+        if (!obj || typeof obj !== "object") return st;
+        if (Array.isArray(obj.accounts)) st.accounts = obj.accounts;
+        if (Array.isArray(obj.transactions)) st.transactions = obj.transactions;
+        if (obj.budgets && typeof obj.budgets === "object") st.budgets = obj.budgets;
+        if (Array.isArray(obj.recurring)) st.recurring = obj.recurring;
+        if (Array.isArray(obj.categories) && obj.categories.length) st.categories = obj.categories;
+        return st;
+      }
+      function loadSavedState(id) {
+        try { var raw = lsGet(LS_DATA_PREFIX + id); return raw ? stateFrom(JSON.parse(raw)) : null; } catch (e) { return null; }
+      }
+      var profiles = [];
+      try { var praw = lsGet(LS_PROFILES); if (praw) profiles = JSON.parse(praw); } catch (e) { profiles = []; }
+      if (!Array.isArray(profiles) || !profiles.length) profiles = [{ id: "default", name: "My Finances" }];
+      profiles = profiles.filter(function (p) { return p && p.id && p.name; });
+      if (!profiles.length) profiles = [{ id: "default", name: "My Finances" }];
+      var activeProfileId = lsGet(LS_ACTIVE) || profiles[0].id;
+      if (!profiles.some(function (p) { return p.id === activeProfileId; })) activeProfileId = profiles[0].id;
+      function currentProfile() {
+        for (var i = 0; i < profiles.length; i++) if (profiles[i].id === activeProfileId) return profiles[i];
+        return profiles[0];
+      }
+      function persistProfiles() { lsSet(LS_PROFILES, JSON.stringify(profiles)); lsSet(LS_ACTIVE, activeProfileId); }
+      var lastSavedAt = null;
+      function saveState() {
+        lsSet(LS_DATA_PREFIX + activeProfileId, JSON.stringify(state));
+        persistProfiles();
+        lastSavedAt = new Date();
+        var el = document.getElementById("save-status");
+        if (el) {
+          el.textContent = storageOk
+            ? "Saved in this browser · " + lastSavedAt.toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit" })
+            : "Auto-save unavailable here — use Export backup below";
+        }
+        scheduleAutoSync();
+      }
+      /* ---------- Supabase sync ---------- */
+      function bakedSb() {
+        var u = String(typeof BAKED_SUPABASE_URL !== "undefined" ? BAKED_SUPABASE_URL : "").trim().replace(/\/+$/, "");
+        var k = String(typeof BAKED_SUPABASE_KEY !== "undefined" ? BAKED_SUPABASE_KEY : "").trim();
+        var isPlaceholder = function (v, ph) { return !v || v === ph || v.toUpperCase().indexOf("PLACE_") === 0 || v.toLowerCase().indexOf("place key here") !== -1 || v.toLowerCase().indexOf("place url here") !== -1; };
+        if (isPlaceholder(u, "https://jwqwdsowcsqbicaldrfs.supabase.co/")) u = "";
+        if (isPlaceholder(k, "sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO")) k = "";
+        return { url: u, key: k, ready: !!(u && k) };
+      }
+      function sbConfig() {
+        var baked = bakedSb();
+        var storedUrl = String(lsGet(LS_SB_URL) || "").trim().replace(/\/+$/, "");
+        var storedKey = String(lsGet(LS_SB_KEY) || "").trim();
+        var autoRaw = lsGet(LS_SB_AUTO);
+        /* Auto-sync defaults ON when a baked-in connection is ready,
+           unless the user explicitly turned it off in this browser. */
+        var auto = autoRaw === null ? baked.ready : autoRaw === "1";
+        return {
+          url: storedUrl || baked.url,
+          key: storedKey || baked.key,
+          auto: auto,
+          baked: baked.ready,
+          usingBaked: baked.ready && !storedUrl && !storedKey,
+          hasStored: !!(storedUrl || storedKey)
+        };
+      }
+      function sbConfigured() { var c = sbConfig(); return !!(c.url && c.key); }
+      function sbHeaders(extra) {
+        var c = sbConfig();
+        var h = { "apikey": c.key, "Authorization": "Bearer " + c.key, "Content-Type": "application/json" };
+        if (extra) for (var k in extra) h[k] = extra[k];
+        return h;
+      }
+      function sbTableUrl(query) {
+        var c = sbConfig();
+        return c.url + "/rest/v1/finance_tracker_data" + (query || "");
+      }
+      function renderBakedBox() {
+        var box = document.getElementById("baked-box");
+        if (!box) return;
+        var baked = bakedSb();
+        var title = document.getElementById("baked-title");
+        var detail = document.getElementById("baked-detail");
+        var note = document.getElementById("connection-note");
+        if (baked.ready) {
+          box.className = "baked-box";
+          if (title) title.textContent = "✓ Baked-in connection is active — this file points at your database";
+          if (detail) detail.innerHTML = "This copy of <code>index.html</code> already has your Supabase URL + publishable key baked in (<code>" + baked.url.replace(/</g, "&lt;") + "</code>), so any browser that opens it connects automatically — no setup on your phone or work PC. Auto-sync is on by default. <strong>On a new device, tap Pull from cloud first</strong> (below) before adding transactions, so you load the cloud copy instead of pushing an empty local one over it. Keep the repo / site private. To point it at a different project, edit the <code>https://jwqwdsowcsqbicaldrfs.supabase.co/</code> / <code>sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO</code> lines again in the file and re-upload.";
+          if (note) note.innerHTML = "Baked-in connection active — you can leave this form blank. Anything you save here is only a per-browser override and will take precedence over the baked-in values in this browser.";
+        } else {
+          box.className = "baked-box warn";
+          if (title) title.textContent = "⚠ One-time setup inside this file — replace “place key here”";
+          /* detail keeps its instructional HTML from the markup */
+          if (note) note.innerHTML = "If you already replaced <code>sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO</code> in the file, you're connected — you can leave this form blank. Use this form only as a per-browser override / fallback.";
+        }
+      }
+      function setCloudStatus(mode, text) {
+        var dot = document.getElementById("cloud-dot");
+        var el = document.getElementById("cloud-status");
+        if (dot) dot.className = "cloud-dot" + (mode ? " " + mode : "");
+        if (el && text) el.textContent = text;
+        var title = document.getElementById("sb-status-title");
+        var detail = document.getElementById("sb-status-detail");
+        if (title && detail) {
+          var cfg = sbConfig();
+          if (!sbConfigured()) { title.textContent = "Not connected"; detail.textContent = "Replace https://jwqwdsowcsqbicaldrfs.supabase.co/ / sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO in this file (see box above), or paste your URL + key in the form to enable database sync in this browser only."; }
+          else if (mode === "error") { title.textContent = "Connected — sync error"; detail.textContent = text; }
+          else if (mode === "syncing") { title.textContent = "Syncing…"; detail.textContent = text; }
+          else if (mode === "on") { title.textContent = cfg.usingBaked ? "Connected to Supabase — via baked-in file link" : "Connected to Supabase"; detail.textContent = text; }
+        }
+        var autoBtn = document.getElementById("btn-autosync");
+        if (autoBtn) autoBtn.textContent = "Auto-sync: " + (sbConfig().auto ? "On" : "Off");
+        renderBakedBox();
+      }
+      function refreshCloudStatus() {
+        if (!sbConfigured()) { setCloudStatus("", bakedSb().ready ? "Cloud: Not connected" : "Cloud: Not connected — replace sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO in the file (Cloud Sync tab) or paste your key there"); return; }
+        var cfg = sbConfig();
+        var via = cfg.usingBaked ? " via baked-in link" : "";
+        var last = lsGet(LS_SB_LAST + activeProfileId);
+        if (last) {
+          var d = new Date(last);
+          setCloudStatus("on", "Cloud: Connected" + via + " · Last synced " + d.toLocaleString("en-CA", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }));
+        } else {
+          setCloudStatus("on", "Cloud: Connected" + via + " — not yet synced for this profile. Push to save it to the database.");
+        }
+      }
+      function scheduleAutoSync() {
+        if (sbBootGuard) return;
+        if (sbPulling || sbSyncing) return;
+        var c = sbConfig();
+        if (!c.auto || !sbConfigured()) return;
+        if (sbPushTimer) clearTimeout(sbPushTimer);
+        sbPushTimer = setTimeout(function () { sbPush(false); }, 2500);
+      }
+      function sbPush(manual) {
+        if (!sbConfigured()) { if (manual) setMsg("msg-sync", "Not connected yet — replace https://jwqwdsowcsqbicaldrfs.supabase.co/ / sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO in this file and re-upload, or paste your Project URL + publishable key in the Connection form and Save connection.", false); return Promise.resolve(false); }
+        if (sbSyncing) return Promise.resolve(false);
+        sbSyncing = true;
+        setCloudStatus("syncing", "Cloud: Syncing — pushing to Supabase…");
+        var prof = currentProfile();
+        var payload = { id: activeProfileId, profile_name: prof ? prof.name : "My Finances", data: state, updated_at: new Date().toISOString() };
+        return fetch(sbTableUrl("?on_conflict=id"), {
+          method: "POST",
+          headers: sbHeaders({ "Prefer": "resolution=merge-duplicates,return=minimal" }),
+          body: JSON.stringify(payload)
+        }).then(function (res) {
+          if (!res.ok) return res.text().then(function (t) { throw new Error("Supabase " + res.status + ": " + t.slice(0, 220)); });
+          lsSet(LS_SB_LAST + activeProfileId, payload.updated_at);
+          sbSyncing = false;
+          refreshCloudStatus();
+          if (manual) setMsg("msg-sync", "Pushed “" + payload.profile_name + "” to Supabase at " + new Date(payload.updated_at).toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit" }) + ". Editing the HTML won't lose this copy.", true);
+          return true;
+        }).catch(function (err) {
+          sbSyncing = false;
+          setCloudStatus("error", "Cloud: Sync failed — " + err.message);
+          if (manual || sbConfig().auto) setMsg("msg-sync", "Push failed: " + err.message + " — check the table was created (Step 2) and the key is the anon public key.", false);
+          return false;
+        });
+      }
+      function sbFetchProfile(id) {
+        return fetch(sbTableUrl("?id=eq." + encodeURIComponent(id) + "&select=id,profile_name,data,updated_at"), {
+          method: "GET", headers: sbHeaders()
+        }).then(function (res) {
+          if (!res.ok) return res.text().then(function (t) { throw new Error("Supabase " + res.status + ": " + t.slice(0, 220)); });
+          return res.json();
+        }).then(function (rows) { return rows && rows.length ? rows[0] : null; });
+      }
+      function sbPull(idOverride, nameOverride) {
+        if (!sbConfigured()) { setMsg("msg-sync", "Not connected yet — replace https://jwqwdsowcsqbicaldrfs.supabase.co/ / sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO in this file and re-upload, or paste your Project URL + publishable key in the Connection form and Save connection.", false); return; }
+        var targetId = idOverride || activeProfileId;
+        setCloudStatus("syncing", "Cloud: Syncing — pulling from Supabase…");
+        sbFetchProfile(targetId).then(function (row) {
+          if (!row) { setCloudStatus("on", "Cloud: Connected — no cloud copy found for this profile yet. Push first."); setMsg("msg-sync", "No profile with this ID in Supabase yet. Push this profile first, or use List profiles in cloud to pull a different one.", false); refreshCloudStatus(); return; }
+          sbPulling = true;
+          /* If pulling a profile that doesn't exist locally, create it */
+          if (!profiles.some(function (p) { return p.id === targetId; })) {
+            profiles.push({ id: targetId, name: row.profile_name || nameOverride || "Imported profile" });
+          } else if (row.profile_name) {
+            for (var i = 0; i < profiles.length; i++) if (profiles[i].id === targetId) profiles[i].name = row.profile_name;
+          }
+          if (targetId !== activeProfileId) { saveState(); activeProfileId = targetId; }
+          state = stateFrom(row.data);
+          lsSet(LS_SB_LAST + targetId, row.updated_at || new Date().toISOString());
+          persistProfiles();
+          render();
+          sbPulling = false;
+          refreshCloudStatus();
+          setMsg("msg-sync", "Pulled “" + (row.profile_name || targetId) + "” from Supabase (cloud updated " + (row.updated_at ? new Date(row.updated_at).toLocaleString("en-CA") : "unknown") + "). It's now saved in this browser too.", true);
+        }).catch(function (err) {
+          sbPulling = false;
+          setCloudStatus("error", "Cloud: Pull failed — " + err.message);
+          setMsg("msg-sync", "Pull failed: " + err.message, false);
+        });
+      }
+      function sbTest() {
+        if (!sbConfigured()) { setMsg("msg-supabase", "No connection yet — either replace sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO in the file, or paste your Project URL + publishable key here and Save connection first.", false); return; }
+        setMsg("msg-supabase", "Testing connection…", true);
+        fetch(sbTableUrl("?select=id&limit=1"), { method: "GET", headers: sbHeaders() }).then(function (res) {
+          if (!res.ok) return res.text().then(function (t) { throw new Error("Supabase " + res.status + ": " + t.slice(0, 220)); });
+          return res.json();
+        }).then(function () {
+          setMsg("msg-supabase", "Connection works — this browser can reach your finance_tracker_data table.", true);
+          refreshCloudStatus();
+        }).catch(function (err) {
+          setMsg("msg-supabase", "Connection failed: " + err.message + " — most common cause is the SQL in Step 2 hasn't been run yet, or the URL/key is from a different project.", false);
+          setCloudStatus("error", "Cloud: Connection failed — " + err.message);
+        });
+      }
+      function sbListCloud() {
+        if (!sbConfigured()) { setMsg("msg-sync", "Connect Supabase first.", false); return; }
+        var box = document.getElementById("cloud-list");
+        box.innerHTML = '<p class="fineprint">Loading profiles from Supabase…</p>';
+        fetch(sbTableUrl("?select=id,profile_name,updated_at&order=updated_at.desc"), { method: "GET", headers: sbHeaders() }).then(function (res) {
+          if (!res.ok) return res.text().then(function (t) { throw new Error("Supabase " + res.status + ": " + t.slice(0, 220)); });
+          return res.json();
+        }).then(function (rows) {
+          if (!rows || !rows.length) { box.innerHTML = '<p class="fineprint" style="margin-top:12px">No profiles in Supabase yet. Push this profile to create the first one.</p>'; return; }
+          box.innerHTML = '<h2 style="font-size:1rem; margin-top:16px">Profiles in Supabase (' + rows.length + ')</h2>' + rows.map(function (r) {
+            var isCurrent = r.id === activeProfileId;
+            return '<div class="cloud-profile-row"><div><strong>' + esc(r.profile_name || r.id) + '</strong>' + (isCurrent ? ' <span class="tag">current</span>' : '') + '<div class="fineprint">Updated ' + (r.updated_at ? new Date(r.updated_at).toLocaleString("en-CA") : "—") + ' · ID ' + esc(String(r.id).slice(0, 12)) + '…</div></div><button type="button" class="btn ghost small" data-pull-cloud-id="' + esc(r.id) + '">Pull this profile</button></div>';
+          }).join("");
+          box.querySelectorAll("[data-pull-cloud-id]").forEach(function (btn) {
+            btn.addEventListener("click", function () { sbPull(btn.getAttribute("data-pull-cloud-id")); });
+          });
+        }).catch(function (err) {
+          box.innerHTML = "";
+          setMsg("msg-sync", "Couldn't list cloud profiles: " + err.message, false);
+        });
+      }
+      var state = loadSavedState(activeProfileId) || blankState();
+      /* A downloaded file carries its data as __SEED__. Apply a new seed once,
+         so a baked-in copy opens with its data, then auto-saves from there. */
+      if (window.__SEED__ && typeof window.__SEED__ === "object") {
+        try {
+          var seedId = String(window.__SEED_ID__ || "legacy-seed");
+          var seedHasData = (window.__SEED__.accounts && window.__SEED__.accounts.length) || (window.__SEED__.transactions && window.__SEED__.transactions.length);
+          if (lsGet(LS_SEED_SEEN) !== seedId && (seedHasData || !loadSavedState(activeProfileId))) {
+            state = stateFrom(window.__SEED__);
+            lsSet(LS_SEED_SEEN, seedId);
+          }
+        } catch (e) { /* keep saved state */ }
+      }
+
+      /* ---------- Helpers ---------- */
+      function $(id) { return document.getElementById(id); }
+      function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+      function esc(t) {
+        return String(t == null ? "" : t).replace(/[&<>"']/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+        });
+      }
+      var fmt = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" });
+      function money(n) { return fmt.format(Math.round(n * 100) / 100); }
+      function todayStr() {
+        var d = new Date();
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      }
+      function monthKey(dateStr) { return String(dateStr || "").slice(0, 7); }
+      function monthLabel(key) {
+        var parts = key.split("-");
+        var d = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
+        return d.toLocaleDateString("en-CA", { month: "long", year: "numeric" });
+      }
+      function prettyDate(dateStr) {
+        var parts = String(dateStr || "").split("-");
+        if (parts.length !== 3) return esc(dateStr);
+        var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        return d.toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
+      }
+      function accountById(id) {
+        for (var i = 0; i < state.accounts.length; i++) if (state.accounts[i].id === id) return state.accounts[i];
+        return null;
+      }
+      function signedAmount(t) {
+        if (t.kind === "income") return t.amount;
+        if (t.kind === "expense") return -t.amount;
+        return 0;
+      }
+      function accountBalance(id) {
+        var acct = accountById(id);
+        if (!acct) return 0;
+        var bal = Number(acct.opening) || 0;
+        state.transactions.forEach(function (t) {
+          if (t.kind === "transfer") {
+            if (t.accountId === id) bal -= t.amount;
+            if (t.toAccountId === id) bal += t.amount;
+          } else if (t.accountId === id) {
+            bal += signedAmount(t);
+          }
+        });
+        return bal;
+      }
+      function setMsg(id, text, ok) {
+        var el = $(id);
+        el.textContent = text;
+        el.className = "form-msg " + (ok ? "ok" : "err");
+        if (text) setTimeout(function () { if (el.textContent === text) el.textContent = ""; }, 5000);
+      }
+      function download(filename, text, type) {
+        var blob = new Blob([text], { type: type || "text/plain;charset=utf-8" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+      }
+
+      /* ---------- Tabs ---------- */
+      var tabBtns = document.querySelectorAll("nav.tabs button");
+      tabBtns.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          tabBtns.forEach(function (b) { b.setAttribute("aria-selected", "false"); });
+          btn.setAttribute("aria-selected", "true");
+          document.querySelectorAll("section.panel").forEach(function (p) { p.classList.remove("active"); });
+          $("panel-" + btn.getAttribute("data-tab")).classList.add("active");
+          render();
+        });
+      });
+
+      /* ---------- Rendering ---------- */
+      function render() {
+        saveState();
+        renderProfileBar();
+        renderSummary(); renderAccounts(); renderLedger(); renderBudgets(); renderRecurring(); renderReports(); renderForecast(); syncSelects();
+      }
+      function renderProfileBar() {
+        var p = currentProfile();
+        if (!p) return;
+        $("profile-name").textContent = p.name;
+        $("profile-avatar").textContent = (p.name.trim().charAt(0) || "M").toUpperCase();
+        $("backup-profile-name").textContent = p.name;
+        $("profile-counts").textContent = state.accounts.length + " account" + (state.accounts.length === 1 ? "" : "s") + " · " + state.transactions.length + " transaction" + (state.transactions.length === 1 ? "" : "s");
+        var sel = $("profile-select");
+        var cur = sel.value;
+        sel.innerHTML = profiles.map(function (pr) {
+          return '<option value="' + esc(pr.id) + '"' + (pr.id === activeProfileId ? " selected" : "") + '>' + esc(pr.name) + '</option>';
+        }).join("");
+        if (cur && profiles.some(function (pr) { return pr.id === cur; }) && cur !== activeProfileId) sel.value = activeProfileId;
+        $("btn-delete-profile").style.display = profiles.length <= 1 ? "none" : "";
+        if (lastSavedAt) $("save-status").textContent = storageOk ? "Saved in this browser · " + lastSavedAt.toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit" }) : "Auto-save unavailable here — use Export backup below";
+        refreshCloudStatus();
+      }
+      function renderSummary() {
+        var assets = 0, debts = 0;
+        state.accounts.forEach(function (a) {
+          var b = accountBalance(a.id);
+          if (b >= 0) assets += b; else debts += -b;
+        });
+        var net = assets - debts;
+        var mk = monthKey(todayStr());
+        var mNet = 0;
+        state.transactions.forEach(function (t) {
+          if (t.kind !== "transfer" && monthKey(t.date) === mk) mNet += signedAmount(t);
+        });
+        $("sum-net").textContent = money(net);
+        $("sum-net").className = "value" + (net < 0 ? " neg" : "");
+        $("sum-assets").textContent = money(assets);
+        $("sum-debts").textContent = money(debts);
+        $("sum-month").textContent = (mNet > 0 ? "+" : "") + money(mNet);
+        $("sum-month").className = "value" + (mNet < 0 ? " neg" : mNet > 0 ? " pos" : "");
+      }
+      function renderAccounts() {
+        var list = $("acct-list");
+        $("acct-empty").style.display = state.accounts.length ? "none" : "block";
+        list.innerHTML = state.accounts.map(function (a) {
+          var b = accountBalance(a.id);
+          var count = state.transactions.filter(function (t) { return t.accountId === a.id || t.toAccountId === a.id; }).length;
+          return '<div class="acct">' +
+            '<div class="kind">' + esc(a.type) + '</div>' +
+            '<div class="name">' + esc(a.name) + '</div>' +
+            '<div class="bal' + (b < 0 ? " neg" : "") + '">' + money(b) + '</div>' +
+            '<div class="meta">Opening ' + money(a.opening) + ' · ' + count + ' transaction' + (count === 1 ? "" : "s") + '</div>' +
+            '<div class="actions"><button class="btn ghost small" data-del-acct="' + a.id + '" type="button">Delete</button></div>' +
+            '</div>';
+        }).join("");
+        list.querySelectorAll("[data-del-acct]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var id = btn.getAttribute("data-del-acct");
+            var acct = accountById(id);
+            var used = state.transactions.some(function (t) { return t.accountId === id || t.toAccountId === id; });
+            if (used) { setMsg("msg-account", "“" + acct.name + "” has transactions in the ledger — delete those first, or keep the account.", false); switchTab("accounts"); return; }
+            state.accounts = state.accounts.filter(function (a) { return a.id !== id; });
+            state.recurring = state.recurring.filter(function (r) { return r.accountId !== id; });
+            render();
+          });
+        });
+      }
+      function switchTab(name) {
+        tabBtns.forEach(function (b) {
+          var on = b.getAttribute("data-tab") === name;
+          b.setAttribute("aria-selected", on ? "true" : "false");
+        });
+        document.querySelectorAll("section.panel").forEach(function (p) { p.classList.remove("active"); });
+        $("panel-" + name).classList.add("active");
+      }
+      function renderLedger() {
+        var q = ($("flt-search").value || "").toLowerCase();
+        var fAcct = $("flt-account").value;
+        var fMonth = $("flt-month").value;
+        var rows = state.transactions.slice().sort(function (a, b) {
+          return a.date < b.date ? 1 : a.date > b.date ? -1 : 0;
+        }).filter(function (t) {
+          if (fAcct && t.accountId !== fAcct && t.toAccountId !== fAcct) return false;
+          if (fMonth && monthKey(t.date) !== fMonth) return false;
+          if (q) {
+            var hay = ((t.payee || "") + " " + (t.category || "")).toLowerCase();
+            if (hay.indexOf(q) === -1) return false;
+          }
+          return true;
+        });
+        $("ledger-empty").style.display = rows.length ? "none" : "block";
+        $("ledger-wrap").style.display = rows.length ? "block" : "none";
+        $("ledger-body").innerHTML = rows.map(function (t) {
+          var acct = accountById(t.accountId);
+          var acctName = acct ? acct.name : "(deleted)";
+          var cat, amtHtml;
+          if (t.kind === "transfer") {
+            var to = accountById(t.toAccountId);
+            cat = "Transfer → " + (to ? to.name : "(deleted)");
+            amtHtml = '<td class="amt">' + money(t.amount) + '</td>';
+          } else {
+            cat = t.category || "—";
+            var s = signedAmount(t);
+            amtHtml = '<td class="amt ' + (s >= 0 ? "pos" : "neg") + '">' + (s >= 0 ? "+" : "−") + money(Math.abs(s)).replace("-", "") + '</td>';
+          }
+          return '<tr>' +
+            '<td>' + prettyDate(t.date) + '</td>' +
+            '<td>' + esc(t.payee || "—") + '</td>' +
+            '<td>' + esc(acctName) + '</td>' +
+            '<td><span class="tag">' + esc(cat) + '</span></td>' +
+            '<td><button type="button" class="clr-btn' + (t.cleared ? " on" : "") + '" data-clr="' + t.id + '">' + (t.cleared ? "Cleared" : "Pending") + '</button></td>' +
+            amtHtml +
+            '<td><button type="button" class="icon-btn" data-del-txn="' + t.id + '" aria-label="Delete transaction">Delete</button></td>' +
+            '</tr>';
+        }).join("");
+        $("ledger-body").querySelectorAll("[data-clr]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var t = state.transactions.filter(function (x) { return x.id === btn.getAttribute("data-clr"); })[0];
+            if (t) { t.cleared = !t.cleared; render(); }
+          });
+        });
+        $("ledger-body").querySelectorAll("[data-del-txn]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            state.transactions = state.transactions.filter(function (x) { return x.id !== btn.getAttribute("data-del-txn"); });
+            render();
+          });
+        });
+      }
+      function renderBudgets() {
+        var mk = monthKey(todayStr());
+        var spent = {};
+        state.transactions.forEach(function (t) {
+          if (t.kind === "expense" && monthKey(t.date) === mk) spent[t.category] = (spent[t.category] || 0) + t.amount;
+        });
+        var cats = Object.keys(state.budgets).sort();
+        $("budget-empty").style.display = cats.length ? "none" : "block";
+        $("budget-list").innerHTML = cats.map(function (cat) {
+          var limit = Number(state.budgets[cat]) || 0;
+          var used = spent[cat] || 0;
+          var pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
+          var cls = used > limit ? "over" : pct >= 80 ? "near" : "";
+          var note = used > limit
+            ? '<div class="budget-note over">Over by ' + money(used - limit) + ' this month</div>'
+            : '<div class="budget-note">' + money(limit - used) + ' left in ' + monthLabel(mk) + '</div>';
+          return '<div class="budget-row"><div class="budget-head">' +
+            '<span class="cat">' + esc(cat) + '</span>' +
+            '<span class="nums">' + money(used) + ' of ' + money(limit) + '</span>' +
+            '<button type="button" class="icon-btn" data-del-budget="' + esc(cat) + '" aria-label="Remove budget for ' + esc(cat) + '">Remove</button>' +
+            '</div><div class="bar"><div class="' + cls + '" style="width:' + pct + '%"></div></div>' + note + '</div>';
+        }).join("");
+        $("budget-list").querySelectorAll("[data-del-budget]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            delete state.budgets[btn.getAttribute("data-del-budget")];
+            render();
+          });
+        });
+        $("cat-chips").innerHTML = state.categories.map(function (c) {
+          return '<span class="tag">' + esc(c.name) + ' · ' + c.kind + '</span>';
+        }).join("");
+      }
+      function advanceDate(dateStr, freq) {
+        var p = dateStr.split("-");
+        var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+        if (freq === "weekly") d.setDate(d.getDate() + 7);
+        else if (freq === "biweekly") d.setDate(d.getDate() + 14);
+        else if (freq === "monthly") d.setMonth(d.getMonth() + 1);
+        else if (freq === "yearly") d.setFullYear(d.getFullYear() + 1);
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      }
+      function prevDate(dateStr, freq) {
+        var p = dateStr.split("-");
+        var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+        if (freq === "weekly") d.setDate(d.getDate() - 7);
+        else if (freq === "biweekly") d.setDate(d.getDate() - 14);
+        else if (freq === "monthly") d.setMonth(d.getMonth() - 1);
+        else if (freq === "yearly") d.setFullYear(d.getFullYear() - 1);
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      }
+      function addDaysStr(dateStr, n) {
+        var p = dateStr.split("-");
+        var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]) + n);
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      }
+      function dayDiff(aStr, bStr) {
+        var pa = aStr.split("-"), pb = bStr.split("-");
+        var a = Date.UTC(Number(pa[0]), Number(pa[1]) - 1, Number(pa[2]));
+        var b = Date.UTC(Number(pb[0]), Number(pb[1]) - 1, Number(pb[2]));
+        return Math.round((b - a) / 86400000);
+      }
+      /* Every date a recurring item falls on inside [start, end] (inclusive).
+         Steps forward from its nextDate; if nextDate is already past the
+         window (e.g. an overdue item), stepping still lands on real dates. */
+      function occurrencesBetween(r, start, end) {
+        var out = [];
+        if (!r || !r.nextDate || start > end) return out;
+        var cursor = r.nextDate;
+        var guard = 0;
+        while (cursor < start && guard < 600) { cursor = advanceDate(cursor, r.freq); guard++; }
+        guard = 0;
+        while (cursor <= end && guard < 600) { out.push(cursor); cursor = advanceDate(cursor, r.freq); guard++; }
+        return out;
+      }
+      /* Balance as of the morning of dateStr: opening balances plus every
+         ledger entry dated before dateStr. For one account, transfers
+         count on both sides; for the total they cancel out. */
+      function balanceAsOf(dateStr, accountId) {
+        var total = 0;
+        state.accounts.forEach(function (a) {
+          if (accountId && a.id !== accountId) return;
+          total += Number(a.opening) || 0;
+        });
+        state.transactions.forEach(function (t) {
+          if (t.date >= dateStr) return;
+          if (t.kind === "transfer") {
+            if (accountId) {
+              if (t.accountId === accountId) total -= t.amount;
+              if (t.toAccountId === accountId) total += t.amount;
+            }
+          } else if (!accountId || t.accountId === accountId) {
+            total += signedAmount(t);
+          }
+        });
+        return total;
+      }
+      function renderRecurring() {
+        var today = todayStr();
+        $("rec-empty").style.display = state.recurring.length ? "none" : "block";
+        var items = state.recurring.slice().sort(function (a, b) { return a.nextDate < b.nextDate ? -1 : 1; });
+        $("rec-list").innerHTML = items.map(function (r) {
+          var acct = accountById(r.accountId);
+          var due = r.nextDate <= today;
+          return '<div class="rec-row"><div class="rec-main">' +
+            '<div class="desc">' + esc(r.payee) + ' <span class="tag">' + esc(r.category) + '</span></div>' +
+            '<div class="meta">' + esc(r.freq) + ' · ' + (acct ? esc(acct.name) : "(deleted account)") + ' · next ' + prettyDate(r.nextDate) + '</div>' +
+            '</div>' +
+            '<span class="due' + (due ? "" : " future") + '">' + (due ? "Due" : "Upcoming") + '</span>' +
+            '<span class="v" style="font-family:\'IBM Plex Mono\',monospace;font-weight:600">' + (r.kind === "income" ? "+" : "−") + money(r.amount).replace("-", "") + '</span>' +
+            '<span><button type="button" class="btn small" data-post-rec="' + r.id + '">Post</button> ' +
+            '<button type="button" class="icon-btn" data-del-rec="' + r.id + '" aria-label="Delete recurring transaction">Delete</button></span>' +
+            '</div>';
+        }).join("");
+        $("rec-list").querySelectorAll("[data-post-rec]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var r = state.recurring.filter(function (x) { return x.id === btn.getAttribute("data-post-rec"); })[0];
+            if (!r) return;
+            state.transactions.push({
+              id: uid(), date: r.nextDate, kind: r.kind, amount: r.amount,
+              accountId: r.accountId, toAccountId: null, category: r.category,
+              payee: r.payee, cleared: false
+            });
+            r.nextDate = advanceDate(r.nextDate, r.freq);
+            render();
+          });
+        });
+        $("rec-list").querySelectorAll("[data-del-rec]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            state.recurring = state.recurring.filter(function (x) { return x.id !== btn.getAttribute("data-del-rec"); });
+            render();
+          });
+        });
+      }
+      function renderReports() {
+        var mk = monthKey(todayStr());
+        $("rep-month-title").textContent = monthLabel(mk);
+        var inc = 0, exp = 0, byCat = {};
+        state.transactions.forEach(function (t) {
+          if (t.kind === "transfer" || monthKey(t.date) !== mk) return;
+          if (t.kind === "income") inc += t.amount;
+          else { exp += t.amount; byCat[t.category] = (byCat[t.category] || 0) + t.amount; }
+        });
+        var net = inc - exp;
+        $("rep-summary").innerHTML =
+          '<div class="rep-row"><span class="k">Income</span><span class="v" style="color:var(--pos)">' + money(inc) + '</span></div>' +
+          '<div class="rep-row"><span class="k">Expenses</span><span class="v" style="color:var(--neg)">' + money(exp) + '</span></div>' +
+          '<div class="rep-row"><span class="k">Net</span><span class="v">' + (net > 0 ? "+" : "") + money(net) + '</span></div>' +
+          '<div class="rep-row"><span class="k">Savings rate</span><span class="v">' + (inc > 0 ? Math.round((net / inc) * 100) + "%" : "—") + '</span></div>';
+        var cats = Object.keys(byCat).sort(function (a, b) { return byCat[b] - byCat[a]; }).slice(0, 6);
+        $("rep-cats").innerHTML = cats.length ? cats.map(function (c) {
+          var pct = exp > 0 ? Math.round((byCat[c] / exp) * 100) : 0;
+          return '<div class="budget-row"><div class="budget-head"><span class="cat">' + esc(c) + '</span>' +
+            '<span class="nums">' + money(byCat[c]) + ' · ' + pct + '%</span></div>' +
+            '<div class="bar"><div style="width:' + pct + '%"></div></div></div>';
+        }).join("") : '<p class="fineprint" style="margin:0">No expenses recorded this month yet.</p>';
+
+        /* Six-month cash-flow chart (hand-built SVG) */
+        var months = [];
+        var now = new Date();
+        for (var i = 5; i >= 0; i--) {
+          var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          months.push(d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"));
+        }
+        var data = months.map(function (k) {
+          var mi = 0, me = 0;
+          state.transactions.forEach(function (t) {
+            if (t.kind === "transfer" || monthKey(t.date) !== k) return;
+            if (t.kind === "income") mi += t.amount; else me += t.amount;
+          });
+          return { key: k, inc: mi, exp: me };
+        });
+        var max = 0;
+        data.forEach(function (d) { max = Math.max(max, d.inc, d.exp); });
+        var W = 640, H = 240, base = 200, top = 16, groupW = W / 6, barW = 26;
+        var parts = [];
+        parts.push('<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="var(--line)" stroke-width="2"/>');
+        if (max <= 0) {
+          parts.push('<text x="' + (W / 2) + '" y="110" text-anchor="middle" font-size="14" fill="var(--ink-faint)">No income or expenses in the last six months yet.</text>');
+        } else {
+          data.forEach(function (d, idx) {
+            var cx = idx * groupW + groupW / 2;
+            var ih = Math.max(0, (d.inc / max) * (base - top));
+            var eh = Math.max(0, (d.exp / max) * (base - top));
+            parts.push('<rect x="' + (cx - barW - 3) + '" y="' + (base - ih) + '" width="' + barW + '" height="' + ih + '" rx="3" fill="var(--accent)"><title>Income ' + esc(money(d.inc)) + '</title></rect>');
+            parts.push('<rect x="' + (cx + 3) + '" y="' + (base - eh) + '" width="' + barW + '" height="' + eh + '" rx="3" fill="var(--neg)" opacity="0.75"><title>Expenses ' + esc(money(d.exp)) + '</title></rect>');
+            var lbl = new Date(Number(d.key.split("-")[0]), Number(d.key.split("-")[1]) - 1, 1)
+              .toLocaleDateString("en-CA", { month: "short" });
+            parts.push('<text x="' + cx + '" y="' + (base + 20) + '" text-anchor="middle" font-size="12" fill="var(--ink-soft)">' + lbl + '</text>');
+            parts.push('<text x="' + cx + '" y="' + (base + 38) + '" text-anchor="middle" font-size="11" fill="' + (d.inc - d.exp >= 0 ? "var(--pos)" : "var(--neg)") + '">' + (d.inc - d.exp >= 0 ? "+" : "−") + money(Math.abs(d.inc - d.exp)).replace("-", "").replace("$", "$") + '</text>');
+          });
+          parts.push('<text x="0" y="12" font-size="11" fill="var(--ink-faint)">Peak month: ' + esc(money(max)) + '</text>');
+          parts.push('<text x="' + W + '" y="12" text-anchor="end" font-size="11" fill="var(--ink-faint)"><tspan fill="var(--accent)">■</tspan> Income&nbsp;&nbsp;<tspan fill="var(--neg)">■</tspan> Expenses</text>');
+        }
+        $("rep-chart").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="Bar chart of income versus expenses for the last six months">' + parts.join("") + '</svg>';
+      }
+      /* ---------- Forecast & pay periods ---------- */
+      var fcPayId = "";
+      function fcRange() {
+        var startEl = $("fc-start"), endEl = $("fc-end"), rangeEl = $("fc-range");
+        var start = (startEl && startEl.value) || todayStr();
+        var end;
+        if (rangeEl && rangeEl.value === "custom") {
+          end = (endEl && endEl.value) || addDaysStr(start, 90);
+          if (end < start) end = start;
+        } else {
+          var days = rangeEl ? Number(rangeEl.value) || 90 : 90;
+          end = addDaysStr(start, days - 1);
+        }
+        return { start: start, end: end };
+      }
+      function buildEvents(start, end, accountId) {
+        var events = [];
+        state.transactions.forEach(function (t) {
+          if (t.date < start || t.date > end) return;
+          if (t.kind === "transfer") {
+            if (!accountId) return; /* cancels out in the total */
+            var delta = 0;
+            if (t.accountId === accountId) delta -= t.amount;
+            if (t.toAccountId === accountId) delta += t.amount;
+            if (delta !== 0) events.push({ date: t.date, label: t.payee || "Transfer", category: "Transfer", source: "Ledger", amount: delta });
+          } else {
+            if (accountId && t.accountId !== accountId) return;
+            events.push({ date: t.date, label: t.payee || t.category || "—", category: t.category || "—", source: "Ledger", amount: signedAmount(t) });
+          }
+        });
+        state.recurring.forEach(function (r) {
+          if (accountId && r.accountId !== accountId) return;
+          occurrencesBetween(r, start, end).forEach(function (d) {
+            events.push({
+              date: d, label: r.payee, category: r.category || "—", source: "Recurring",
+              amount: r.kind === "income" ? r.amount : -r.amount
+            });
+          });
+        });
+        events.sort(function (a, b) {
+          if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+          return b.amount - a.amount; /* income lands before expenses on the same day */
+        });
+        return events;
+      }
+      function renderForecast() {
+        if (!$("fc-start")) return;
+        /* Account filter options (preserve selection) */
+        var acctSel = $("fc-account");
+        var acctCur = acctSel.value;
+        acctSel.innerHTML = '<option value="">All accounts (total)</option>' + state.accounts.map(function (a) {
+          return '<option value="' + a.id + '">' + esc(a.name) + '</option>';
+        }).join("");
+        if (acctCur && accountById(acctCur)) acctSel.value = acctCur;
+        var accountId = acctSel.value || null;
+
+        var range = fcRange();
+        var startBal = balanceAsOf(range.start, accountId);
+        var events = buildEvents(range.start, range.end, accountId);
+        var bal = startBal, inc = 0, exp = 0, lowest = startBal, lowestDate = range.start;
+        var dayBal = [{ date: range.start, bal: startBal }];
+        events.forEach(function (ev) {
+          bal += ev.amount;
+          if (ev.amount >= 0) inc += ev.amount; else exp += -ev.amount;
+          if (bal < lowest) { lowest = bal; lowestDate = ev.date; }
+          if (dayBal[dayBal.length - 1].date === ev.date) dayBal[dayBal.length - 1].bal = bal;
+          else dayBal.push({ date: ev.date, bal: bal });
+        });
+        var endBal = bal, net = endBal - startBal;
+
+        $("fc-end-bal").textContent = money(endBal);
+        $("fc-end-bal").className = "value" + (endBal < 0 ? " neg" : "");
+        $("fc-net").textContent = (net > 0 ? "+" : "") + money(net);
+        $("fc-net").className = "value" + (net < 0 ? " neg" : net > 0 ? " pos" : "");
+        $("fc-inc").textContent = money(inc);
+        $("fc-exp").textContent = money(exp);
+        $("fc-lowest").innerHTML = events.length
+          ? "Starts at <strong>" + esc(money(startBal)) + "</strong> on " + esc(prettyDate(range.start)) +
+            " · lowest point <strong>" + esc(money(lowest)) + "</strong> on " + esc(prettyDate(lowestDate)) +
+            (lowest < 0 ? " — the projection dips below zero in this window." : "")
+          : "Starting balance in this window: <strong>" + esc(money(startBal)) + "</strong>.";
+
+        /* ---- Projection chart (hand-built SVG) ---- */
+        var W = 640, H = 230, top = 18, base = 192, left = 6, right = 634;
+        var spanDays = Math.max(1, dayDiff(range.start, range.end));
+        var minV = Math.min(startBal, lowest), maxV = Math.max(startBal, endBal);
+        dayBal.forEach(function (p) { minV = Math.min(minV, p.bal); maxV = Math.max(maxV, p.bal); });
+        if (maxV - minV < 1) { maxV += 1; minV -= 1; }
+        var pad = (maxV - minV) * 0.12; maxV += pad; minV -= pad;
+        function X(dstr) { return left + (dayDiff(range.start, dstr) / spanDays) * (right - left); }
+        function Y(v) { return top + (1 - (v - minV) / (maxV - minV)) * (base - top); }
+        var pts = [];
+        pts.push(X(range.start).toFixed(1) + "," + Y(startBal).toFixed(1));
+        dayBal.forEach(function (p) { pts.push(X(p.date).toFixed(1) + "," + Y(p.bal).toFixed(1)); });
+        pts.push(X(range.end).toFixed(1) + "," + Y(endBal).toFixed(1));
+        var parts = [];
+        if (minV < 0 && maxV > 0) {
+          parts.push('<line x1="' + left + '" y1="' + Y(0) + '" x2="' + right + '" y2="' + Y(0) + '" stroke="var(--neg)" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>');
+          parts.push('<text x="' + right + '" y="' + (Y(0) - 4) + '" text-anchor="end" font-size="10" fill="var(--neg)">$0</text>');
+        }
+        parts.push('<line x1="' + left + '" y1="' + base + '" x2="' + right + '" y2="' + base + '" stroke="var(--line)" stroke-width="2"/>');
+        parts.push('<polyline points="' + pts.join(" ") + '" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>');
+        parts.push('<circle cx="' + X(range.start) + '" cy="' + Y(startBal) + '" r="4" fill="var(--accent)"><title>Start ' + esc(money(startBal)) + '</title></circle>');
+        parts.push('<circle cx="' + X(range.end) + '" cy="' + Y(endBal) + '" r="4" fill="var(--accent)"><title>Projected ' + esc(money(endBal)) + '</title></circle>');
+        parts.push('<text x="' + left + '" y="12" font-size="11" fill="var(--ink-faint)">High ' + esc(money(maxV - pad)) + '</text>');
+        parts.push('<text x="' + right + '" y="12" text-anchor="end" font-size="11" fill="var(--ink-faint)">Low ' + esc(money(minV + pad)) + '</text>');
+        parts.push('<text x="' + left + '" y="' + (base + 20) + '" font-size="12" fill="var(--ink-soft)">' + esc(prettyDate(range.start)) + '</text>');
+        parts.push('<text x="' + right + '" y="' + (base + 20) + '" text-anchor="end" font-size="12" fill="var(--ink-soft)">' + esc(prettyDate(range.end)) + '</text>');
+        parts.push('<text x="' + (W / 2) + '" y="' + (base + 38) + '" text-anchor="middle" font-size="12" font-weight="600" fill="' + (endBal >= startBal ? "var(--pos)" : "var(--neg)") + '">Projected ' + esc(money(endBal)) + ' by ' + esc(prettyDate(range.end)) + '</text>');
+        $("fc-chart").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="Line chart of projected balance from ' + esc(prettyDate(range.start)) + ' to ' + esc(prettyDate(range.end)) + '">' + parts.join("") + '</svg>';
+
+        /* ---- Projected events table ---- */
+        $("fc-empty").style.display = events.length ? "none" : "block";
+        $("fc-events-wrap").style.display = events.length ? "block" : "none";
+        var runBal = startBal, shown = events.slice(0, 250);
+        $("fc-events").innerHTML = shown.map(function (ev) {
+          runBal += ev.amount;
+          return '<tr>' +
+            '<td>' + prettyDate(ev.date) + '</td>' +
+            '<td>' + esc(ev.label) + '</td>' +
+            '<td><span class="tag">' + esc(ev.category) + '</span></td>' +
+            '<td>' + esc(ev.source) + '</td>' +
+            '<td class="amt ' + (ev.amount >= 0 ? "pos" : "neg") + '">' + (ev.amount >= 0 ? "+" : "−") + money(Math.abs(ev.amount)).replace("-", "") + '</td>' +
+            '<td class="amt">' + money(runBal) + '</td>' +
+            '</tr>';
+        }).join("") + (events.length > shown.length
+          ? '<tr><td colspan="6" style="color:var(--ink-faint)">Showing the first ' + shown.length + ' of ' + events.length + ' projected entries — shorten the timeframe to see the rest.</td></tr>'
+          : "");
+        renderPayPeriods();
+      }
+      function renderPayPeriods() {
+        var box = $("pay-periods"), empty = $("pay-empty"), sel = $("fc-pay-source");
+        if (!box || !sel) return;
+        var pays = state.recurring.filter(function (r) { return r.kind === "income"; });
+        if (!pays.length) {
+          sel.innerHTML = '<option value="">(no recurring income yet)</option>';
+          box.innerHTML = ""; empty.style.display = "block"; return;
+        }
+        empty.style.display = "none";
+        if (!fcPayId || !pays.some(function (r) { return r.id === fcPayId; })) {
+          var pick = pays.filter(function (r) { return (r.category || "").toLowerCase() === "paycheque"; })[0] || pays[0];
+          pays.forEach(function (r) { if (r.amount > pick.amount && (pick.category || "").toLowerCase() !== "paycheque") pick = r; });
+          fcPayId = pick.id;
+        }
+        sel.innerHTML = pays.map(function (r) {
+          return '<option value="' + r.id + '"' + (r.id === fcPayId ? " selected" : "") + '>' + esc(r.payee) + ' — ' + esc(money(r.amount)) + ' · ' + esc(r.freq) + '</option>';
+        }).join("");
+        var pay = null;
+        pays.forEach(function (r) { if (r.id === fcPayId) pay = r; });
+        if (!pay) { box.innerHTML = ""; return; }
+
+        /* Pay dates: walk back from nextDate to the most recent payday on
+           or before today, then step forward for the periods to show. */
+        var today = todayStr();
+        var first = pay.nextDate, guard = 0;
+        while (first > today && guard < 600) { first = prevDate(first, pay.freq); guard++; }
+        var dates = [first];
+        for (var i = 0; i < 4; i++) dates.push(advanceDate(dates[dates.length - 1], pay.freq));
+
+        function periodData(pStart, pEndExclusive) {
+          var lastDay = addDaysStr(pEndExclusive, -1);
+          var exps = [], otherInc = 0;
+          state.recurring.forEach(function (r) {
+            if (r.id === pay.id) return;
+            occurrencesBetween(r, pStart, lastDay).forEach(function (d) {
+              if (r.kind === "expense") exps.push({ date: d, payee: r.payee, category: r.category || "—", amount: r.amount });
+              else otherInc += r.amount;
+            });
+          });
+          exps.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+          var expTotal = 0; exps.forEach(function (e) { expTotal += e.amount; });
+          return { exps: exps, expTotal: expTotal, otherInc: otherInc, leftover: pay.amount + otherInc - expTotal };
+        }
+        function expRows(pd) {
+          if (!pd.exps.length) return '<p class="fc-note">No recurring expenses fall in this period — the whole pay is unspoken for.</p>';
+          return pd.exps.map(function (e) {
+            return '<div class="period-exp"><span class="pe-main">' + esc(e.payee) + ' <span class="tag">' + esc(e.category) + '</span></span>' +
+              '<span class="pe-date">' + esc(prettyDate(e.date)) + '</span>' +
+              '<span class="pe-amt">−' + esc(money(e.amount).replace("-", "")) + '</span></div>';
+          }).join("") +
+          '<div class="period-total"><span>Total expenses between pays</span><span class="pe-amt">−' + esc(money(pd.expTotal).replace("-", "")) + '</span></div>' +
+          (pd.otherInc > 0 ? '<div class="period-total"><span>Other recurring income</span><span class="pe-amt">+' + esc(money(pd.otherInc).replace("-", "")) + '</span></div>' : "");
+        }
+
+        var html = "";
+        for (var p = 0; p < dates.length - 1; p++) {
+          var pStart = dates[p], pEnd = dates[p + 1];
+          var pd = periodData(pStart, pEnd);
+          var isCurrent = today >= pStart && today < pEnd;
+          var isNext = pStart > today && dates[p - 1] <= today || (p === 0 && pStart > today);
+          var whenLabel = (isCurrent ? "Current period · " : isNext ? "Next pay period · " : "Pay period · ") +
+            prettyDate(pStart) + " → " + prettyDate(addDaysStr(pEnd, -1));
+          if (isNext || (p === 0 && pStart > today)) {
+            html += '<div class="period-hero"><div class="p-when">' + esc(whenLabel) + '</div>' +
+              '<div class="p-sub">Pay of ' + esc(money(pay.amount)) + ' lands ' + esc(prettyDate(pStart)) + '; next pay lands ' + esc(prettyDate(pEnd)) + '. Everything below comes out in between.</div>' +
+              '<div class="p-nums"><span>Pay <b>' + esc(money(pay.amount)) + '</b></span>' +
+              '<span>Expenses <b>−' + esc(money(pd.expTotal).replace("-", "")) + '</b></span>' +
+              (pd.otherInc > 0 ? '<span>Other income <b>+' + esc(money(pd.otherInc).replace("-", "")) + '</b></span>' : "") +
+              '<span>Left over <b style="color:' + (pd.leftover < 0 ? "var(--neg)" : "var(--pos)") + '">' + esc(money(pd.leftover)) + '</b></span></div></div>' +
+              '<div style="padding:4px 2px 10px">' + expRows(pd) + '</div>';
+          } else {
+            html += '<div class="period-block"><div class="period-head"><span class="p-when">' + esc(whenLabel) + '</span>' +
+              '<span class="p-left' + (pd.leftover < 0 ? " neg" : "") + '">' + esc(money(pd.leftover)) + ' left</span></div>' +
+              '<div class="fc-note" style="margin:4px 0 2px">Pay ' + esc(money(pay.amount)) + ' · expenses −' + esc(money(pd.expTotal).replace("-", "")) + ' across ' + pd.exps.length + ' bill' + (pd.exps.length === 1 ? "" : "s") + '</div>' +
+              expRows(pd) + '</div>';
+          }
+        }
+        box.innerHTML = html;
+      }
+      function syncSelects() {
+        var acctOpts = state.accounts.map(function (a) {
+          return '<option value="' + a.id + '">' + esc(a.name) + '</option>';
+        }).join("");
+        ["txn-account", "txn-to", "rec-account"].forEach(function (id) {
+          var el = $(id);
+          var cur = el.value;
+          el.innerHTML = acctOpts || '<option value="">(add an account first)</option>';
+          if (cur && accountById(cur)) el.value = cur;
+        });
+        var f = $("flt-account");
+        var fcur = f.value;
+        f.innerHTML = '<option value="">All accounts</option>' + acctOpts;
+        if (fcur && accountById(fcur)) f.value = fcur;
+        var expCats = state.categories.filter(function (c) { return c.kind === "expense"; });
+        var incCats = state.categories.filter(function (c) { return c.kind === "income"; });
+        var kind = $("txn-kind").value;
+        var catList = kind === "income" ? incCats : expCats;
+        var tc = $("txn-category");
+        var tcur = tc.value;
+        tc.innerHTML = catList.map(function (c) { return '<option>' + esc(c.name) + '</option>'; }).join("");
+        if (tcur && catList.some(function (c) { return c.name === tcur; })) tc.value = tcur;
+        $("budget-category").innerHTML = expCats.map(function (c) { return '<option>' + esc(c.name) + '</option>'; }).join("");
+        var rc = $("rec-category");
+        var rcur = rc.value;
+        rc.innerHTML = state.categories.map(function (c) { return '<option>' + esc(c.name) + '</option>'; }).join("");
+        if (rcur && state.categories.some(function (c) { return c.name === rcur; })) rc.value = rcur;
+        var months = {};
+        state.transactions.forEach(function (t) { months[monthKey(t.date)] = true; });
+        var fm = $("flt-month");
+        var fmcur = fm.value;
+        fm.innerHTML = '<option value="">All months</option>' + Object.keys(months).sort().reverse().map(function (k) {
+          return '<option value="' + k + '">' + esc(monthLabel(k)) + '</option>';
+        }).join("");
+        if (fmcur && months[fmcur]) fm.value = fmcur;
+      }
+
+      /* ---------- Forms ---------- */
+      $("form-account").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var fd = new FormData(e.target);
+        var name = String(fd.get("name") || "").trim();
+        if (!name) return;
+        state.accounts.push({ id: uid(), name: name, type: String(fd.get("type")), opening: Number(fd.get("opening")) || 0 });
+        e.target.reset();
+        setMsg("msg-account", "Account “" + name + "” added.", true);
+        render();
+      });
+      $("txn-kind").addEventListener("change", function () {
+        var isTransfer = $("txn-kind").value === "transfer";
+        $("field-to").style.display = isTransfer ? "block" : "none";
+        $("field-category").style.display = isTransfer ? "none" : "block";
+        syncSelects();
+      });
+      $("form-txn").addEventListener("submit", function (e) {
+        e.preventDefault();
+        if (!state.accounts.length) { setMsg("msg-txn", "Add an account first — transactions need somewhere to live.", false); return; }
+        var fd = new FormData(e.target);
+        var kind = String(fd.get("kind"));
+        var amount = Number(fd.get("amount"));
+        var accountId = String(fd.get("account") || "");
+        if (!accountId || !(amount > 0)) { setMsg("msg-txn", "Pick an account and enter an amount above zero.", false); return; }
+        var txn = {
+          id: uid(), date: String(fd.get("date")) || todayStr(), kind: kind, amount: amount,
+          accountId: accountId, toAccountId: null,
+          category: kind === "transfer" ? "" : String(fd.get("category") || ""),
+          payee: String(fd.get("payee") || "").trim(), cleared: false
+        };
+        if (kind === "transfer") {
+          txn.toAccountId = String(fd.get("toAccount") || "");
+          if (!txn.toAccountId || txn.toAccountId === accountId) {
+            setMsg("msg-txn", "A transfer needs two different accounts.", false); return;
+          }
+          txn.payee = txn.payee || "Transfer";
+        }
+        state.transactions.push(txn);
+        e.target.reset();
+        e.target.querySelector('[name="date"]').value = todayStr();
+        setMsg("msg-txn", "Transaction added.", true);
+        render();
+      });
+      $("form-budget").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var fd = new FormData(e.target);
+        var cat = String(fd.get("category") || "");
+        var limit = Number(fd.get("limit"));
+        if (!cat || !(limit > 0)) { setMsg("msg-budget", "Pick a category and enter a limit above zero.", false); return; }
+        state.budgets[cat] = limit;
+        e.target.reset();
+        setMsg("msg-budget", "Budget for “" + cat + "” set to " + money(limit) + " / month.", true);
+        render();
+      });
+      $("form-category").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var fd = new FormData(e.target);
+        var name = String(fd.get("name") || "").trim();
+        if (!name) return;
+        if (state.categories.some(function (c) { return c.name.toLowerCase() === name.toLowerCase(); })) {
+          setMsg("msg-category", "That category already exists.", false); return;
+        }
+        state.categories.push({ name: name, kind: String(fd.get("kind")) });
+        e.target.reset();
+        setMsg("msg-category", "Category “" + name + "” added.", true);
+        render();
+      });
+      $("form-recurring").addEventListener("submit", function (e) {
+        e.preventDefault();
+        if (!state.accounts.length) { setMsg("msg-recurring", "Add an account first.", false); return; }
+        var fd = new FormData(e.target);
+        var amount = Number(fd.get("amount"));
+        var accountId = String(fd.get("account") || "");
+        if (!accountId || !(amount > 0)) { setMsg("msg-recurring", "Pick an account and enter an amount above zero.", false); return; }
+        state.recurring.push({
+          id: uid(), payee: String(fd.get("payee") || "").trim(), kind: String(fd.get("kind")),
+          amount: amount, accountId: accountId, category: String(fd.get("category") || ""),
+          freq: String(fd.get("freq")), nextDate: String(fd.get("nextDate")) || todayStr()
+        });
+        e.target.reset();
+        e.target.querySelector('[name="nextDate"]').value = todayStr();
+        setMsg("msg-recurring", "Recurring transaction added.", true);
+        render();
+      });
+      ["flt-search", "flt-account", "flt-month"].forEach(function (id) {
+        $(id).addEventListener("input", renderLedger);
+        $(id).addEventListener("change", renderLedger);
+      });
+
+      /* ---------- Forecast controls ---------- */
+      $("fc-range").addEventListener("change", function () {
+        $("fc-end-wrap").style.display = $("fc-range").value === "custom" ? "block" : "none";
+        renderForecast();
+      });
+      ["fc-start", "fc-end", "fc-account"].forEach(function (id) {
+        $(id).addEventListener("change", renderForecast);
+      });
+      $("fc-pay-source").addEventListener("change", function () {
+        fcPayId = $("fc-pay-source").value;
+        renderPayPeriods();
+      });
+
+      /* ---------- Profiles ---------- */
+      $("profile-select").addEventListener("change", function () {
+        var id = $("profile-select").value;
+        if (!id || id === activeProfileId) return;
+        saveState();
+        activeProfileId = id;
+        state = loadSavedState(activeProfileId) || blankState();
+        persistProfiles();
+        render();
+      });
+      $("btn-new-profile").addEventListener("click", function () {
+        $("profile-create").classList.add("open");
+        $("new-profile-name").focus();
+      });
+      $("btn-cancel-profile").addEventListener("click", function () {
+        $("profile-create").classList.remove("open");
+        $("msg-profile").textContent = "";
+      });
+      $("form-profile").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var name = String(new FormData(e.target).get("name") || "").trim();
+        if (!name) return;
+        if (profiles.some(function (p) { return p.name.toLowerCase() === name.toLowerCase(); })) {
+          setMsg("msg-profile", "A profile with that name already exists — pick a different name or switch to it above.", false);
+          return;
+        }
+        saveState();
+        var np = { id: newId(), name: name };
+        profiles.push(np);
+        activeProfileId = np.id;
+        state = blankState();
+        persistProfiles();
+        e.target.reset();
+        $("profile-create").classList.remove("open");
+        render();
+      });
+      $("btn-delete-profile").addEventListener("click", function () {
+        if (profiles.length <= 1) return;
+        var p = currentProfile();
+        /* Two-step in-page delete: first tap arms the button, second tap deletes */
+        if ($("btn-delete-profile").getAttribute("data-armed") !== p.id) {
+          $("btn-delete-profile").setAttribute("data-armed", p.id);
+          $("btn-delete-profile").textContent = "Tap again to delete “" + p.name + "”";
+          setTimeout(function () { $("btn-delete-profile").removeAttribute("data-armed"); $("btn-delete-profile").textContent = "Delete profile"; renderProfileBar(); }, 4000);
+          return;
+        }
+        lsDel(LS_DATA_PREFIX + p.id);
+        profiles = profiles.filter(function (x) { return x.id !== p.id; });
+        activeProfileId = profiles[0].id;
+        state = loadSavedState(activeProfileId) || blankState();
+        $("btn-delete-profile").removeAttribute("data-armed");
+        $("btn-delete-profile").textContent = "Delete profile";
+        persistProfiles();
+        render();
+      });
+
+      /* ---------- Backup / export / download ---------- */
+      $("btn-export-json").addEventListener("click", function () {
+        download("finance-backup-" + todayStr() + ".json", JSON.stringify(state, null, 2), "application/json");
+        setMsg("msg-backup", "Backup downloaded.", true);
+      });
+      $("btn-export-csv").addEventListener("click", function () {
+        function cell(v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; }
+        var lines = ["Date,Type,Payee,Account,To Account,Category,Amount,Cleared"];
+        state.transactions.slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; }).forEach(function (t) {
+          var acct = accountById(t.accountId);
+          var to = t.toAccountId ? accountById(t.toAccountId) : null;
+          var amt = t.kind === "transfer" ? t.amount : signedAmount(t);
+          lines.push([t.date, t.kind, cell(t.payee), cell(acct ? acct.name : ""), cell(to ? to.name : ""), cell(t.category), amt.toFixed(2), t.cleared ? "yes" : "no"].join(","));
+        });
+        download("transactions-" + todayStr() + ".csv", lines.join("\n"), "text/csv;charset=utf-8");
+        setMsg("msg-backup", "CSV downloaded.", true);
+      });
+      $("import-file").addEventListener("change", function () {
+        var file = $("import-file").files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+          try {
+            var data = JSON.parse(String(reader.result));
+            if (!data || !Array.isArray(data.accounts) || !Array.isArray(data.transactions)) throw new Error("shape");
+            state.accounts = data.accounts;
+            state.transactions = data.transactions;
+            state.budgets = (data.budgets && typeof data.budgets === "object") ? data.budgets : {};
+            state.recurring = Array.isArray(data.recurring) ? data.recurring : [];
+            state.categories = (Array.isArray(data.categories) && data.categories.length) ? data.categories : DEFAULT_CATEGORIES.slice();
+            setMsg("msg-backup", "Backup imported — " + state.accounts.length + " accounts, " + state.transactions.length + " transactions.", true);
+            render();
+          } catch (err) {
+            setMsg("msg-backup", "That file doesn't look like a backup from this tracker.", false);
+          }
+          $("import-file").value = "";
+        };
+        reader.readAsText(file);
+      });
+      $("btn-download-html").addEventListener("click", function () {
+        var seed = '<script>window.__SEED_ID__ = ' + JSON.stringify(newId() + "-" + todayStr()) + '; window.__SEED__ = ' + JSON.stringify(state).replace(/</g, "\\u003c") + ';<' + '/script>';
+        var html = "<!doctype html>\n" + document.documentElement.outerHTML;
+        var marker = "<script>\n      \"use strict\";";
+        var idx = html.indexOf(marker);
+        if (idx !== -1) html = html.slice(0, idx) + seed + "\n    " + html.slice(idx);
+        else html = html.replace("</body>", seed + "</body>");
+        download("index.html", html, "text/html;charset=utf-8");
+        setMsg("msg-backup", bakedSb().ready ? "index.html downloaded — your current data AND your baked-in Supabase link are included, so it will connect on any device." : "index.html downloaded with your current data included. It still has sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO placeholders — replace them in the file before uploading if you want baked-in sync on every device.", true);
+      });
+
+      /* ---------- Supabase wiring ---------- */
+      (function initSupabase() {
+        /* Only pre-fill the form from a per-browser stored override.
+           Baked-in values live in the file itself and are shown in
+           the baked box above — leaving the form blank avoids
+           accidentally copying the baked key into localStorage. */
+        var storedUrl = String(lsGet(LS_SB_URL) || "").trim();
+        var storedKey = String(lsGet(LS_SB_KEY) || "").trim();
+        if ($("sb-url")) { $("sb-url").value = storedUrl; if (bakedSb().ready && !storedUrl) $("sb-url").placeholder = bakedSb().url + "  (baked in)"; }
+        if ($("sb-key")) { $("sb-key").value = storedKey; if (bakedSb().ready && !storedKey) $("sb-key").placeholder = "•••••••• baked in — leave blank unless overriding"; }
+        renderBakedBox();
+        refreshCloudStatus();
+      })();
+      $("form-supabase").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var url = String($("sb-url").value || "").trim().replace(/\/+$/, "");
+        var key = String($("sb-key").value || "").trim();
+        if ((!url || !key) && bakedSb().ready) { setMsg("msg-supabase", "You're already connected via the baked-in link in this file — no need to save here. Testing that connection…", true); sbTest(); return; }
+        if (!url || !key) { setMsg("msg-supabase", "Both the Project URL and publishable / anon key are needed — or bake them into the file by replacing sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO.", false); return; }
+        if (url.indexOf("https://") !== 0) { setMsg("msg-supabase", "Project URL should start with https:// — copy it from Settings → API in Supabase.", false); return; }
+        lsSet(LS_SB_URL, url); lsSet(LS_SB_KEY, key);
+        setMsg("msg-supabase", "Connection saved in this browser (override). Testing it now…", true);
+        refreshCloudStatus();
+        sbTest();
+      });
+      $("btn-test-sb").addEventListener("click", function () {
+        /* Save what's typed first so Test uses the current fields;
+           if the form is blank, Test just uses the baked-in link. */
+        var url = String($("sb-url").value || "").trim().replace(/\/+$/, "");
+        var key = String($("sb-key").value || "").trim();
+        if (url && key) { lsSet(LS_SB_URL, url); lsSet(LS_SB_KEY, key); }
+        sbTest();
+      });
+      $("btn-toggle-key").addEventListener("click", function () {
+        var inp = $("sb-key");
+        var show = inp.type === "password";
+        inp.type = show ? "text" : "password";
+        $("btn-toggle-key").textContent = show ? "Hide key" : "Show key";
+      });
+      $("btn-disconnect-sb").addEventListener("click", function () {
+        if ($("btn-disconnect-sb").getAttribute("data-armed") !== "1") {
+          $("btn-disconnect-sb").setAttribute("data-armed", "1");
+          $("btn-disconnect-sb").textContent = "Tap again to disconnect";
+          setTimeout(function () { $("btn-disconnect-sb").removeAttribute("data-armed"); $("btn-disconnect-sb").textContent = "Disconnect"; }, 4000);
+          return;
+        }
+        lsDel(LS_SB_URL); lsDel(LS_SB_KEY); lsSet(LS_SB_AUTO, "0");
+        $("sb-url").value = ""; $("sb-key").value = "";
+        $("btn-disconnect-sb").removeAttribute("data-armed");
+        $("btn-disconnect-sb").textContent = "Disconnect";
+        $("cloud-list").innerHTML = "";
+        refreshCloudStatus();
+        if (bakedSb().ready) {
+          setMsg("msg-supabase", "Per-browser override cleared and Auto-sync turned off in this browser — but the baked-in link in this file is still active, so this browser will still show as connected. To fully disconnect everywhere, edit the file and put https://jwqwdsowcsqbicaldrfs.supabase.co/ / sb_publishable_78EJc23wgdD67W5a2WJrPw_-SQwq7ZO back, then re-upload.", true);
+        } else {
+          setMsg("msg-supabase", "Disconnected — your data stays in Supabase and in this browser, they just stop syncing until you reconnect.", true);
+        }
+      });
+      $("btn-copy-sql").addEventListener("click", function () {
+        var sql = $("sb-sql").textContent;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(sql).then(function () { setMsg("msg-supabase", "SQL copied — paste it into Supabase → SQL Editor and Run.", true); }, function () { setMsg("msg-supabase", "Copy failed — select the SQL text manually and copy it.", false); });
+        } else { setMsg("msg-supabase", "Select the SQL text above and copy it manually.", false); }
+      });
+      $("btn-autosync").addEventListener("click", function () {
+        var next = sbConfig().auto ? "0" : "1";
+        lsSet(LS_SB_AUTO, next);
+        refreshCloudStatus();
+        setMsg("msg-sync", next === "1" ? "Auto-sync on — changes will push to Supabase a few seconds after you make them." : "Auto-sync off — use Push to cloud when you want to sync.", true);
+        if (next === "1") sbPush(false);
+      });
+      $("btn-push-cloud").addEventListener("click", function () { sbPush(true); });
+      $("btn-pull-cloud").addEventListener("click", function () { sbPull(); });
+      $("btn-refresh-cloud").addEventListener("click", function () { sbListCloud(); });
+
+      /* ---------- Init ---------- */
+      document.querySelector('#form-txn [name="date"]').value = todayStr();
+      document.querySelector('#form-recurring [name="nextDate"]').value = todayStr();
+      $("fc-start").value = todayStr();
+      $("fc-end").value = addDaysStr(todayStr(), 90);
+      render();
+      setTimeout(function () { sbBootGuard = false; }, 3500);
+    </script>
+  </body>
+</html>
