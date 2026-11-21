@@ -1,4 +1,4 @@
-# Personal Finance Tracker
+# Personal Finance Tracker.
 
 A free, KMyMoney-style personal finance tracker. Single self-contained HTML file — no build step, no server code in this repo.
 
