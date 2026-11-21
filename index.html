@@ -322,6 +322,42 @@
       .period-exp .pe-amt { font-family: "IBM Plex Mono", monospace; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
       .period-total { display: flex; justify-content: space-between; gap: 12px; padding-top: 8px; font-size: .94rem; color: var(--ink-soft); }
       .period-total .pe-amt { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-variant-numeric: tabular-nums; }
+      /* Forecast graph / breakdown slide-over */
+      .fc-view-bar { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; justify-content: space-between; margin-top: 14px; }
+      .fc-toggle { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 3px; }
+      .fc-toggle button {
+        border: none; background: transparent; color: var(--ink-soft); font-weight: 700; font-size: .9rem;
+        padding: 7px 14px; min-height: 38px; border-radius: 999px; white-space: nowrap;
+      }
+      .fc-toggle button[aria-selected="true"] { background: var(--accent); color: #fff; box-shadow: 0 1px 4px rgba(20,40,30,.18); }
+      @media (prefers-color-scheme: dark) { .fc-toggle button[aria-selected="true"] { color: #0c1511; } }
+      .fc-toggle button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .fc-view-hint { color: var(--ink-soft); font-size: .88rem; }
+      .fc-slide-viewport { overflow: hidden; margin-top: 10px; transition: height .48s cubic-bezier(.32,.72,.24,1); }
+      @media (prefers-reduced-motion: reduce) { .fc-slide-viewport { transition: none; } }
+      .fc-slide-track { display: flex; align-items: flex-start; transition: transform .48s cubic-bezier(.32,.72,.24,1); will-change: transform; }
+      .fc-slide-track.show-breakdown { transform: translateX(-100%); }
+      .fc-slide-pane { flex: 0 0 100%; min-width: 0; }
+      @media (prefers-reduced-motion: reduce) { .fc-slide-track { transition: none; } }
+      .bd-layout { display: grid; grid-template-columns: 212px 1fr; gap: 22px; align-items: start; }
+      @media (max-width: 640px) { .bd-layout { grid-template-columns: 1fr; justify-items: center; } .bd-list { width: 100%; } }
+      .bd-donut { position: relative; width: 212px; max-width: 72vw; }
+      .bd-donut svg { display: block; width: 100%; height: auto; }
+      .bd-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; padding: 0 34px; }
+      .bd-center .bd-total { font-family: "IBM Plex Mono", monospace; font-weight: 700; font-size: 1.12rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+      .bd-center .bd-cap { color: var(--ink-faint); font-size: .76rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-top: 2px; }
+      .bd-list { display: grid; gap: 2px; min-width: 0; }
+      .bd-row { padding: 9px 0; border-bottom: 1px solid var(--line); }
+      .bd-row:last-child { border-bottom: none; }
+      .bd-head { display: flex; align-items: baseline; gap: 9px; }
+      .bd-dot { width: 12px; height: 12px; border-radius: 3px; flex: 0 0 12px; align-self: center; }
+      .bd-name { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+      .bd-pct { margin-left: auto; font-family: "IBM Plex Mono", monospace; font-weight: 700; font-size: 1.02rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+      .bd-amt { color: var(--ink-soft); font-family: "IBM Plex Mono", monospace; font-size: .88rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+      .bd-bar { height: 8px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; margin-top: 6px; }
+      .bd-bar > div { height: 100%; border-radius: 999px; min-width: 3px; }
+      .bd-top-note { color: var(--ink-soft); font-size: .92rem; margin: 0 0 10px; }
+      .bd-top-note strong { color: var(--ink); }
       footer { margin-top: 40px; color: var(--ink-faint); font-size: .85rem; text-align: center; }
 
       @media (max-width: 760px) {
@@ -614,7 +650,23 @@
             <div class="stat"><div class="label">Expenses in period</div><div class="value neg" id="fc-exp">$0.00</div></div>
           </div>
           <p class="fc-note" id="fc-lowest"></p>
-          <div class="chart-box" id="fc-chart" style="margin-top:10px"></div>
+          <div class="fc-view-bar">
+            <div class="fc-toggle" role="tablist" aria-label="Forecast view">
+              <button type="button" role="tab" id="fc-view-graph" aria-selected="true">Projection graph</button>
+              <button type="button" role="tab" id="fc-view-breakdown" aria-selected="false">Expense breakdown&nbsp;%</button>
+            </div>
+            <span class="fc-view-hint" id="fc-breakdown-total"></span>
+          </div>
+          <div class="fc-slide-viewport">
+            <div class="fc-slide-track" id="fc-slide-track">
+              <div class="fc-slide-pane" id="fc-pane-graph">
+                <div class="chart-box" id="fc-chart"></div>
+              </div>
+              <div class="fc-slide-pane" id="fc-pane-breakdown" aria-hidden="true">
+                <div id="fc-breakdown"></div>
+              </div>
+            </div>
+          </div>
           <div id="fc-events-wrap" style="margin-top:14px">
             <table class="ledger" aria-label="Projected transactions">
               <thead><tr>
@@ -1501,6 +1553,90 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
       }
       /* ---------- Forecast & pay periods ---------- */
       var fcPayId = "";
+      var fcView = "graph";
+      /* Fixed colour per category so Housing is always the same colour,
+         in every timeframe. Custom categories get a colour by hash. */
+      var CAT_COLORS = {
+        "Housing": "#2f7d5b", "Transport": "#e07a3f", "Groceries": "#3a86c8",
+        "Dining out": "#c94f6d", "Utilities": "#7a5fc0", "Fuel": "#c49002",
+        "Insurance": "#457b9d", "Health": "#d1495b", "Entertainment": "#8e6bc8",
+        "Subscriptions": "#2a9d8f", "Shopping": "#e05299", "Travel": "#0096b7",
+        "Fees & interest": "#6a994e", "Other expense": "#8d99ae", "Transfer": "#9a9a92"
+      };
+      var CAT_COLOR_EXTRA = ["#b5651d", "#4c78a8", "#54a24b", "#e45756", "#72b7b2", "#edc948", "#af7aa1", "#ff9da7", "#9d755d", "#5f8d4e"];
+      function catColor(name) {
+        if (CAT_COLORS[name]) return CAT_COLORS[name];
+        var h = 0;
+        for (var i = 0; i < String(name).length; i++) h = (h * 31 + String(name).charCodeAt(i)) >>> 0;
+        return CAT_COLOR_EXTRA[h % CAT_COLOR_EXTRA.length];
+      }
+      function setFcView(view) {
+        fcView = view === "breakdown" ? "breakdown" : "graph";
+        var track = $("fc-slide-track");
+        if (track) track.classList.toggle("show-breakdown", fcView === "breakdown");
+        var g = $("fc-view-graph"), b = $("fc-view-breakdown");
+        if (g) g.setAttribute("aria-selected", fcView === "graph" ? "true" : "false");
+        if (b) b.setAttribute("aria-selected", fcView === "breakdown" ? "true" : "false");
+        var pg = $("fc-pane-graph"), pb = $("fc-pane-breakdown");
+        if (pg) pg.setAttribute("aria-hidden", fcView === "graph" ? "false" : "true");
+        if (pb) pb.setAttribute("aria-hidden", fcView === "breakdown" ? "false" : "true");
+        sizeFcViewport();
+      }
+      function sizeFcViewport() {
+        var vp = document.querySelector(".fc-slide-viewport");
+        var active = fcView === "breakdown" ? $("fc-pane-breakdown") : $("fc-pane-graph");
+        if (vp && active && active.offsetHeight) vp.style.height = active.offsetHeight + "px";
+      }
+      function renderBreakdown(events, totalExp, range) {
+        var box = $("fc-breakdown");
+        if (!box) return;
+        var hint = $("fc-breakdown-total");
+        if (hint) hint.textContent = totalExp > 0
+          ? money(totalExp) + " in expenses · " + prettyDate(range.start) + " → " + prettyDate(range.end)
+          : "";
+        var byCat = {};
+        events.forEach(function (ev) {
+          if (ev.amount >= 0) return;
+          var cat = ev.category || "—";
+          byCat[cat] = (byCat[cat] || 0) + (-ev.amount);
+        });
+        var cats = Object.keys(byCat).sort(function (a, b) { return byCat[b] - byCat[a]; });
+        if (!cats.length || totalExp <= 0) {
+          box.innerHTML = '<div class="empty"><strong>No expenses in this timeframe</strong>' +
+            'Nothing outgoing is projected between ' + esc(prettyDate(range.start)) + ' and ' + esc(prettyDate(range.end)) +
+            ' for this account selection. Add recurring bills in the Recurring tab, or widen the timeframe above.</div>';
+          return;
+        }
+        /* Donut: one stroked circle per category, segments laid end to end. */
+        var R = 80, C = 2 * Math.PI * R, cx = 106, cy = 106, segs = [], acc = 0;
+        cats.forEach(function (cat) {
+          var frac = byCat[cat] / totalExp;
+          var len = Math.max(0, frac * C - (cats.length > 1 ? 2.5 : 0));
+          segs.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="none" stroke="' + catColor(cat) +
+            '" stroke-width="27" stroke-dasharray="' + len.toFixed(2) + ' ' + (C - len).toFixed(2) +
+            '" stroke-dashoffset="' + (-acc * C).toFixed(2) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')">' +
+            '<title>' + esc(cat) + ': ' + esc(money(byCat[cat])) + ' (' + (frac * 100).toFixed(1) + '%)</title></circle>');
+          acc += frac;
+        });
+        var donut = '<div class="bd-donut"><svg viewBox="0 0 212 212" role="img" aria-label="Donut chart of expenses by category">' +
+          '<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="none" stroke="var(--surface-2)" stroke-width="27"/>' +
+          segs.join("") + '</svg>' +
+          '<div class="bd-center"><div class="bd-total">' + esc(money(totalExp)) + '</div><div class="bd-cap">Total expenses</div></div></div>';
+        var top = cats[0], topPct = (byCat[top] / totalExp) * 100;
+        var rows = cats.map(function (cat) {
+          var pct = (byCat[cat] / totalExp) * 100;
+          var col = catColor(cat);
+          return '<div class="bd-row"><div class="bd-head">' +
+            '<span class="bd-dot" style="background:' + col + '" aria-hidden="true"></span>' +
+            '<span class="bd-name">' + esc(cat) + '</span>' +
+            '<span class="bd-amt">' + esc(money(byCat[cat])) + '</span>' +
+            '<span class="bd-pct" style="color:' + col + '">' + pct.toFixed(1) + '%</span></div>' +
+            '<div class="bd-bar"><div style="width:' + pct.toFixed(1) + '%;background:' + col + '"></div></div></div>';
+        }).join("");
+        box.innerHTML = '<p class="bd-top-note"><strong>' + esc(top) + '</strong> is your biggest expense in this window at <strong>' +
+          topPct.toFixed(1) + '%</strong> of everything going out. Percentages use the same timeframe and account as the projection graph.</p>' +
+          '<div class="bd-layout">' + donut + '<div class="bd-list">' + rows + '</div></div>';
+      }
       function fcRange() {
         var startEl = $("fc-start"), endEl = $("fc-end"), rangeEl = $("fc-range");
         var start = (startEl && startEl.value) || todayStr();
@@ -1609,6 +1745,8 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         parts.push('<text x="' + right + '" y="' + (base + 20) + '" text-anchor="end" font-size="12" fill="var(--ink-soft)">' + esc(prettyDate(range.end)) + '</text>');
         parts.push('<text x="' + (W / 2) + '" y="' + (base + 38) + '" text-anchor="middle" font-size="12" font-weight="600" fill="' + (endBal >= startBal ? "var(--pos)" : "var(--neg)") + '">Projected ' + esc(money(endBal)) + ' by ' + esc(prettyDate(range.end)) + '</text>');
         $("fc-chart").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="Line chart of projected balance from ' + esc(prettyDate(range.start)) + ' to ' + esc(prettyDate(range.end)) + '">' + parts.join("") + '</svg>';
+        renderBreakdown(events, exp, range);
+        sizeFcViewport();
 
         /* ---- Projected events table ---- */
         $("fc-empty").style.display = events.length ? "none" : "block";
@@ -1847,6 +1985,9 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         fcPayId = $("fc-pay-source").value;
         renderPayPeriods();
       });
+      $("fc-view-graph").addEventListener("click", function () { setFcView("graph"); });
+      $("fc-view-breakdown").addEventListener("click", function () { setFcView("breakdown"); });
+      window.addEventListener("resize", function () { sizeFcViewport(); });
 
       /* ---------- Profiles ---------- */
       $("profile-select").addEventListener("change", function () {
