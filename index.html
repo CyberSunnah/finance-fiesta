@@ -421,6 +421,7 @@
         <button role="tab" aria-selected="false" data-tab="budgets">Budgets</button>
         <button role="tab" aria-selected="false" data-tab="recurring">Recurring</button>
         <button role="tab" aria-selected="false" data-tab="forecast">Forecast</button>
+        <button role="tab" aria-selected="false" data-tab="history">History</button>
         <button role="tab" aria-selected="false" data-tab="reports">Reports</button>
         <button role="tab" aria-selected="false" data-tab="sync">Cloud Sync</button>
         <button role="tab" aria-selected="false" data-tab="backup">Backup &amp; Download</button>
@@ -693,6 +694,85 @@
           <div class="empty" id="pay-empty" style="display:none">
             <strong>No recurring pay found</strong>
             Add your paycheque as a recurring <em>income</em> transaction in the Recurring tab (e.g. “Paycheque”, every 2 weeks), and this view will line your bills up between paydays.
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ HISTORY ============ -->
+      <section class="panel" id="panel-history" role="tabpanel">
+        <h2>History</h2>
+        <p class="panel-intro">The Forecast view, but backwards — see what actually happened. Pick a past timeframe and get the same pretty balance graph and coloured expense breakdown, built from your real ledger entries (not projections).</p>
+
+        <div class="card">
+          <h2 style="font-size:1.1rem">Balance history</h2>
+          <p class="fineprint" style="margin:2px 0 14px">Your balance day by day over the period you pick, using opening balances plus every ledger entry dated inside it. Recurring items only count here once you've posted them to the ledger — that's what makes this historical, not projected.</p>
+          <div class="fc-controls">
+            <label class="field">Timeframe
+              <select id="hs-range">
+                <option value="30">Last 30 days</option>
+                <option value="90" selected>Last 90 days</option>
+                <option value="180">Last 6 months</option>
+                <option value="365">Last 12 months</option>
+                <option value="ytd">This year so far</option>
+                <option value="custom">Custom dates…</option>
+              </select>
+            </label>
+            <label class="field">From
+              <input type="date" id="hs-start" />
+            </label>
+            <label class="field" id="hs-end-wrap" style="display:none">To
+              <input type="date" id="hs-end" />
+            </label>
+            <label class="field">Account
+              <select id="hs-account"><option value="">All accounts (total)</option></select>
+            </label>
+          </div>
+          <div class="fc-stats">
+            <div class="stat"><div class="label">Balance at end</div><div class="value" id="hs-end-bal">$0.00</div></div>
+            <div class="stat"><div class="label">Net change</div><div class="value" id="hs-net">$0.00</div></div>
+            <div class="stat"><div class="label">Income in period</div><div class="value pos" id="hs-inc">$0.00</div></div>
+            <div class="stat"><div class="label">Expenses in period</div><div class="value neg" id="hs-exp">$0.00</div></div>
+          </div>
+          <p class="fc-note" id="hs-note"></p>
+          <p class="fc-note" id="hs-avg-note"></p>
+          <div class="fc-view-bar">
+            <div class="fc-toggle" role="tablist" aria-label="History view">
+              <button type="button" role="tab" id="hs-view-graph" aria-selected="true">Balance graph</button>
+              <button type="button" role="tab" id="hs-view-breakdown" aria-selected="false">Expense breakdown&nbsp;%</button>
+            </div>
+            <span class="fc-view-hint" id="hs-breakdown-total"></span>
+          </div>
+          <div class="fc-slide-viewport" id="hs-slide-viewport">
+            <div class="fc-slide-track" id="hs-slide-track">
+              <div class="fc-slide-pane" id="hs-pane-graph">
+                <div class="chart-box" id="hs-chart"></div>
+              </div>
+              <div class="fc-slide-pane" id="hs-pane-breakdown" aria-hidden="true">
+                <div id="hs-breakdown"></div>
+              </div>
+            </div>
+          </div>
+          <div id="hs-events-wrap" style="margin-top:14px">
+            <table class="ledger" aria-label="Historical transactions">
+              <thead><tr>
+                <th>Date</th><th>Description</th><th>Category</th><th class="amt">Amount</th><th class="amt">Balance</th>
+              </tr></thead>
+              <tbody id="hs-events"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="hs-empty" style="display:none">
+            <strong>Nothing recorded in this timeframe</strong>
+            No ledger entries fall inside it for this account selection. Widen the timeframe above, or add / post entries in the Ledger and Recurring tabs and they'll show up here.
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 style="font-size:1.1rem">Month by month — in this period</h2>
+          <p class="fineprint" style="margin:2px 0 10px">Income vs. expenses for each month touched by the timeframe above, so you can spot your best and worst months at a glance.</p>
+          <div id="hs-months"></div>
+          <div class="empty" id="hs-months-empty" style="display:none">
+            <strong>No months to show yet</strong>
+            Add ledger entries in the period above and the month-by-month comparison will appear here.
           </div>
         </div>
       </section>
@@ -1255,7 +1335,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
       function render() {
         saveState();
         renderProfileBar();
-        renderSummary(); renderAccounts(); renderLedger(); renderBudgets(); renderRecurring(); renderReports(); renderForecast(); syncSelects();
+        renderSummary(); renderAccounts(); renderLedger(); renderBudgets(); renderRecurring(); renderReports(); renderForecast(); renderHistory(); syncSelects();
       }
       function renderProfileBar() {
         var p = currentProfile();
@@ -1791,6 +1871,192 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
           : "");
         renderPayPeriods();
       }
+      /* ---------- History (Forecast, but backwards) ---------- */
+      var hsView = "graph";
+      function setHsView(view) {
+        hsView = view === "breakdown" ? "breakdown" : "graph";
+        var track = $("hs-slide-track");
+        if (track) track.classList.toggle("show-breakdown", hsView === "breakdown");
+        var g = $("hs-view-graph"), b = $("hs-view-breakdown");
+        if (g) g.setAttribute("aria-selected", hsView === "graph" ? "true" : "false");
+        if (b) b.setAttribute("aria-selected", hsView === "breakdown" ? "true" : "false");
+        var pg = $("hs-pane-graph"), pb = $("hs-pane-breakdown");
+        if (pg) pg.setAttribute("aria-hidden", hsView === "graph" ? "false" : "true");
+        if (pb) pb.setAttribute("aria-hidden", hsView === "breakdown" ? "false" : "true");
+        sizeHsViewport();
+      }
+      function sizeHsViewport() {
+        var vp = $("hs-slide-viewport");
+        var active = hsView === "breakdown" ? $("hs-pane-breakdown") : $("hs-pane-graph");
+        if (vp && active && active.offsetHeight) vp.style.height = active.offsetHeight + "px";
+      }
+      function hsRange() {
+        var rangeEl = $("hs-range"), startEl = $("hs-start"), endEl = $("hs-end");
+        var today = todayStr();
+        var start, end;
+        if (rangeEl && rangeEl.value === "custom") {
+          start = (startEl && startEl.value) || addDaysStr(today, -89);
+          end = (endEl && endEl.value) || today;
+          if (end < start) end = start;
+          if (end > today) end = today;
+        } else if (rangeEl && rangeEl.value === "ytd") {
+          start = today.slice(0, 4) + "-01-01";
+          end = today;
+          if (startEl) startEl.value = start;
+        } else {
+          var days = rangeEl ? Number(rangeEl.value) || 90 : 90;
+          end = today;
+          start = addDaysStr(today, -(days - 1));
+          if (startEl) startEl.value = start;
+          if (endEl) endEl.value = end;
+        }
+        return { start: start, end: end };
+      }
+      function buildHistoryEvents(start, end, accountId) {
+        var events = [];
+        state.transactions.forEach(function (t) {
+          if (t.date < start || t.date > end) return;
+          if (t.kind === "transfer") {
+            if (!accountId) return;
+            var delta = 0;
+            if (t.accountId === accountId) delta -= t.amount;
+            if (t.toAccountId === accountId) delta += t.amount;
+            if (delta !== 0) events.push({ date: t.date, label: t.payee || "Transfer", category: "Transfer", amount: delta });
+          } else {
+            if (accountId && t.accountId !== accountId) return;
+            events.push({ date: t.date, label: t.payee || t.category || "—", category: t.category || "—", amount: signedAmount(t) });
+          }
+        });
+        events.sort(function (a, b) {
+          if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+          return b.amount - a.amount;
+        });
+        return events;
+      }
+      function renderHistoryBreakdown(events, totalExp, range) {
+        var box = $("hs-breakdown");
+        if (!box) return;
+        var hint = $("hs-breakdown-total");
+        if (hint) hint.textContent = totalExp > 0 ? money(totalExp) + " in expenses · " + prettyDate(range.start) + " → " + prettyDate(range.end) : "";
+        var byCat = {};
+        events.forEach(function (ev) {
+          if (ev.amount >= 0) return;
+          var cat = ev.category || "—";
+          byCat[cat] = (byCat[cat] || 0) + (-ev.amount);
+        });
+        var cats = Object.keys(byCat).sort(function (a, b) { return byCat[b] - byCat[a]; });
+        if (!cats.length || totalExp <= 0) {
+          box.innerHTML = '<div class="empty"><strong>No expenses in this timeframe</strong>Nothing outgoing was recorded between ' + esc(prettyDate(range.start)) + ' and ' + esc(prettyDate(range.end)) + ' for this account selection. Add or post entries, or widen the timeframe above.</div>';
+          return;
+        }
+        var R = 80, C = 2 * Math.PI * R, cx = 106, cy = 106, segs = [], acc = 0;
+        cats.forEach(function (cat) {
+          var frac = byCat[cat] / totalExp;
+          var len = Math.max(0, frac * C - (cats.length > 1 ? 2.5 : 0));
+          segs.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="none" stroke="' + catColor(cat) + '" stroke-width="27" stroke-dasharray="' + len.toFixed(2) + ' ' + (C - len).toFixed(2) + '" stroke-dashoffset="' + (-acc * C).toFixed(2) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')"><title>' + esc(cat) + ': ' + esc(money(byCat[cat])) + ' (' + (frac * 100).toFixed(1) + '%)</title></circle>');
+          acc += frac;
+        });
+        var donut = '<div class="bd-donut"><svg viewBox="0 0 212 212" role="img" aria-label="Donut chart of historical expenses by category"><circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="none" stroke="var(--surface-2)" stroke-width="27"/>' + segs.join("") + '</svg><div class="bd-center"><div class="bd-total">' + esc(money(totalExp)) + '</div><div class="bd-cap">Total expenses</div></div></div>';
+        var top = cats[0], topPct = (byCat[top] / totalExp) * 100;
+        var rows = cats.map(function (cat) {
+          var pct = (byCat[cat] / totalExp) * 100;
+          var col = catColor(cat);
+          return '<div class="bd-row"><div class="bd-head"><span class="bd-dot" style="background:' + col + '" aria-hidden="true"></span><span class="bd-name">' + esc(cat) + '</span><span class="bd-amt">' + esc(money(byCat[cat])) + '</span><span class="bd-pct" style="color:' + col + '">' + pct.toFixed(1) + '%</span></div><div class="bd-bar"><div style="width:' + pct.toFixed(1) + '%;background:' + col + '"></div></div></div>';
+        }).join("");
+        box.innerHTML = '<p class="bd-top-note"><strong>' + esc(top) + '</strong> was your biggest expense in this window at <strong>' + topPct.toFixed(1) + '%</strong> of everything that went out. Same colours as Forecast, so a category is always the same colour in both views.</p><div class="bd-layout">' + donut + '<div class="bd-list">' + rows + '</div></div>';
+      }
+      function renderHistoryMonths(events, range) {
+        var box = $("hs-months"), empty = $("hs-months-empty");
+        if (!box || !empty) return;
+        var byMonth = {};
+        var order = [];
+        events.forEach(function (ev) {
+          var k = monthKey(ev.date);
+          if (!byMonth[k]) { byMonth[k] = { inc: 0, exp: 0 }; order.push(k); }
+          if (ev.amount >= 0) byMonth[k].inc += ev.amount; else byMonth[k].exp += -ev.amount;
+        });
+        order.sort();
+        if (!order.length) { box.innerHTML = ""; empty.style.display = "block"; return; }
+        empty.style.display = "none";
+        var maxExp = 0; order.forEach(function (k) { maxExp = Math.max(maxExp, byMonth[k].exp); });
+        box.innerHTML = order.map(function (k) {
+          var m = byMonth[k], net = m.inc - m.exp, pct = maxExp > 0 ? Math.round((m.exp / maxExp) * 100) : 0;
+          return '<div class="budget-row"><div class="budget-head"><span class="cat">' + esc(monthLabel(k)) + '</span><span class="nums">In ' + esc(money(m.inc)) + ' · Out ' + esc(money(m.exp)) + ' · Net <strong style="color:' + (net < 0 ? "var(--neg)" : "var(--pos)") + '">' + (net > 0 ? "+" : "") + esc(money(net)) + '</strong></span></div><div class="bar"><div style="width:' + pct + '%;background:var(--neg);opacity:.75"></div></div><div class="budget-note">Expenses were ' + (maxExp > 0 && m.exp === maxExp ? "the highest in this period" : pct + "% of your highest-spending month in this period") + '.</div></div>';
+        }).join("");
+      }
+      function renderHistory() {
+        if (!$("hs-start")) return;
+        var acctSel = $("hs-account");
+        var acctCur = acctSel.value;
+        acctSel.innerHTML = '<option value="">All accounts (total)</option>' + state.accounts.map(function (a) { return '<option value="' + a.id + '">' + esc(a.name) + '</option>'; }).join("");
+        if (acctCur && accountById(acctCur)) acctSel.value = acctCur;
+        var accountId = acctSel.value || null;
+        var range = hsRange();
+        var startBal = balanceAsOf(range.start, accountId);
+        var events = buildHistoryEvents(range.start, range.end, accountId);
+        var bal = startBal, inc = 0, exp = 0, lowest = startBal, lowestDate = range.start, highest = startBal, highestDate = range.start;
+        var dayBal = [{ date: range.start, bal: startBal }];
+        events.forEach(function (ev) {
+          bal += ev.amount;
+          if (ev.amount >= 0) inc += ev.amount; else exp += -ev.amount;
+          if (bal < lowest) { lowest = bal; lowestDate = ev.date; }
+          if (bal > highest) { highest = bal; highestDate = ev.date; }
+          if (dayBal[dayBal.length - 1].date === ev.date) dayBal[dayBal.length - 1].bal = bal;
+          else dayBal.push({ date: ev.date, bal: bal });
+        });
+        var endBal = bal, net = endBal - startBal;
+        var daysIn = Math.max(1, dayDiff(range.start, range.end) + 1);
+        $("hs-end-bal").textContent = money(endBal);
+        $("hs-end-bal").className = "value" + (endBal < 0 ? " neg" : "");
+        $("hs-net").textContent = (net > 0 ? "+" : "") + money(net);
+        $("hs-net").className = "value" + (net < 0 ? " neg" : net > 0 ? " pos" : "");
+        $("hs-inc").textContent = money(inc);
+        $("hs-exp").textContent = money(exp);
+        $("hs-note").innerHTML = events.length ? "Started at <strong>" + esc(money(startBal)) + "</strong> on " + esc(prettyDate(range.start)) + " · lowest <strong>" + esc(money(lowest)) + "</strong> on " + esc(prettyDate(lowestDate)) + " · highest <strong>" + esc(money(highest)) + "</strong> on " + esc(prettyDate(highestDate)) + " · ended at <strong>" + esc(money(endBal)) + "</strong> on " + esc(prettyDate(range.end)) + "." : "Starting balance in this window: <strong>" + esc(money(startBal)) + "</strong>. No ledger entries fall inside it yet.";
+        $("hs-avg-note").innerHTML = exp > 0 ? "That's an average of <strong>" + esc(money(exp / daysIn)) + " / day</strong> in expenses over " + daysIn + " day" + (daysIn === 1 ? "" : "s") + (inc > 0 ? ", and a savings rate of <strong>" + Math.round((net / inc) * 100) + "%</strong> for the period." : ".") : "";
+        var W = 640, H = 230, top = 18, base = 192, left = 6, right = 634;
+        var spanDays = Math.max(1, dayDiff(range.start, range.end));
+        var minV = Math.min(startBal, lowest), maxV = Math.max(startBal, endBal, highest);
+        dayBal.forEach(function (p) { minV = Math.min(minV, p.bal); maxV = Math.max(maxV, p.bal); });
+        if (maxV - minV < 1) { maxV += 1; minV -= 1; }
+        var pad = (maxV - minV) * 0.12; maxV += pad; minV -= pad;
+        function X(dstr) { return left + (dayDiff(range.start, dstr) / spanDays) * (right - left); }
+        function Y(v) { return top + (1 - (v - minV) / (maxV - minV)) * (base - top); }
+        var pts = [];
+        pts.push(X(range.start).toFixed(1) + "," + Y(startBal).toFixed(1));
+        dayBal.forEach(function (p) { pts.push(X(p.date).toFixed(1) + "," + Y(p.bal).toFixed(1)); });
+        pts.push(X(range.end).toFixed(1) + "," + Y(endBal).toFixed(1));
+        var parts = [];
+        if (!events.length) {
+          parts.push('<text x="' + (W / 2) + '" y="105" text-anchor="middle" font-size="14" fill="var(--ink-faint)">No ledger entries in this period yet — add or post some and the history line will appear.</text>');
+        }
+        if (minV < 0 && maxV > 0) {
+          parts.push('<line x1="' + left + '" y1="' + Y(0) + '" x2="' + right + '" y2="' + Y(0) + '" stroke="var(--neg)" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>');
+          parts.push('<text x="' + right + '" y="' + (Y(0) - 4) + '" text-anchor="end" font-size="10" fill="var(--neg)">$0</text>');
+        }
+        parts.push('<line x1="' + left + '" y1="' + base + '" x2="' + right + '" y2="' + base + '" stroke="var(--line)" stroke-width="2"/>');
+        if (events.length) {
+          parts.push('<polyline points="' + pts.join(" ") + '" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>');
+          parts.push('<circle cx="' + X(range.start) + '" cy="' + Y(startBal) + '" r="4" fill="var(--accent)"><title>Start ' + esc(money(startBal)) + '</title></circle>');
+          parts.push('<circle cx="' + X(range.end) + '" cy="' + Y(endBal) + '" r="4" fill="var(--accent)"><title>End ' + esc(money(endBal)) + '</title></circle>');
+        }
+        parts.push('<text x="' + left + '" y="12" font-size="11" fill="var(--ink-faint)">High ' + esc(money(maxV - pad)) + '</text>');
+        parts.push('<text x="' + right + '" y="12" text-anchor="end" font-size="11" fill="var(--ink-faint)">Low ' + esc(money(minV + pad)) + '</text>');
+        parts.push('<text x="' + left + '" y="' + (base + 20) + '" font-size="12" fill="var(--ink-soft)">' + esc(prettyDate(range.start)) + '</text>');
+        parts.push('<text x="' + right + '" y="' + (base + 20) + '" text-anchor="end" font-size="12" fill="var(--ink-soft)">' + esc(prettyDate(range.end)) + '</text>');
+        parts.push('<text x="' + (W / 2) + '" y="' + (base + 38) + '" text-anchor="middle" font-size="12" font-weight="600" fill="' + (endBal >= startBal ? "var(--pos)" : "var(--neg)") + '">Ended at ' + esc(money(endBal)) + ' on ' + esc(prettyDate(range.end)) + '</text>');
+        $("hs-chart").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="Line chart of actual balance from ' + esc(prettyDate(range.start)) + ' to ' + esc(prettyDate(range.end)) + '">' + parts.join("") + '</svg>';
+        renderHistoryBreakdown(events, exp, range);
+        renderHistoryMonths(events, range);
+        sizeHsViewport();
+        $("hs-empty").style.display = events.length ? "none" : "block";
+        $("hs-events-wrap").style.display = events.length ? "block" : "none";
+        var runBal = startBal, shown = events.slice(0, 250);
+        $("hs-events").innerHTML = shown.map(function (ev) {
+          runBal += ev.amount;
+          return '<tr><td>' + prettyDate(ev.date) + '</td><td>' + esc(ev.label) + '</td><td><span class="tag">' + esc(ev.category) + '</span></td><td class="amt ' + (ev.amount >= 0 ? "pos" : "neg") + '">' + (ev.amount >= 0 ? "+" : "−") + money(Math.abs(ev.amount)).replace("-", "") + '</td><td class="amt">' + money(runBal) + '</td></tr>';
+        }).join("") + (events.length > shown.length ? '<tr><td colspan="5" style="color:var(--ink-faint)">Showing the first ' + shown.length + ' of ' + events.length + ' entries — shorten the timeframe to see the rest.</td></tr>' : "");
+      }
       function renderPayPeriods() {
         var box = $("pay-periods"), empty = $("pay-empty"), sel = $("fc-pay-source");
         if (!box || !sel) return;
@@ -2011,7 +2277,21 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
       });
       $("fc-view-graph").addEventListener("click", function () { setFcView("graph"); });
       $("fc-view-breakdown").addEventListener("click", function () { setFcView("breakdown"); });
-      window.addEventListener("resize", function () { sizeFcViewport(); });
+      window.addEventListener("resize", function () { sizeFcViewport(); sizeHsViewport(); });
+
+      /* ---------- History controls ---------- */
+      $("hs-range").addEventListener("change", function () {
+        $("hs-end-wrap").style.display = $("hs-range").value === "custom" ? "block" : "none";
+        renderHistory();
+      });
+      ["hs-start", "hs-end", "hs-account"].forEach(function (id) {
+        $(id).addEventListener("change", function () {
+          if (id !== "hs-account" && $("hs-range").value !== "custom") $("hs-range").value = "custom", $("hs-end-wrap").style.display = "block";
+          renderHistory();
+        });
+      });
+      $("hs-view-graph").addEventListener("click", function () { setHsView("graph"); });
+      $("hs-view-breakdown").addEventListener("click", function () { setHsView("breakdown"); });
 
       /* ---------- Profiles ---------- */
       $("profile-select").addEventListener("change", function () {
@@ -2199,6 +2479,8 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
       document.querySelector('#form-recurring [name="nextDate"]').value = todayStr();
       $("fc-start").value = todayStr();
       $("fc-end").value = addDaysStr(todayStr(), 90);
+      $("hs-start").value = addDaysStr(todayStr(), -89);
+      $("hs-end").value = todayStr();
       render();
       setTimeout(function () { sbBootGuard = false; }, 3500);
       sbBootAutoPull();
