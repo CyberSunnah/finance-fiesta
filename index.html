@@ -358,6 +358,43 @@
       .bd-bar > div { height: 100%; border-radius: 999px; min-width: 3px; }
       .bd-top-note { color: var(--ink-soft); font-size: .92rem; margin: 0 0 10px; }
       .bd-top-note strong { color: var(--ink); }
+      /* Interactive breakdown: clickable donut + expandable categories */
+      .bd-hint { color: var(--ink-soft); font-size: .88rem; margin: 0 0 12px; }
+      .bd-seg { cursor: pointer; }
+      .bd-seg.bd-dim { opacity: .25; }
+      .bd-seg:hover, .bd-seg:focus { opacity: 1; }
+      .bd-sel-cat { font-weight: 700; font-size: .98rem; line-height: 1.2; overflow-wrap: anywhere; }
+      button.bd-toggle {
+        width: 100%; background: none; border: none; padding: 4px 0; margin: 0;
+        color: inherit; text-align: left; cursor: pointer; border-radius: 6px;
+      }
+      button.bd-toggle:hover .bd-name { color: var(--accent-strong); }
+      button.bd-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .bd-chev { display: inline-block; font-size: 1.15rem; line-height: 1; color: var(--ink-faint); transition: transform .25s ease; flex: 0 0 auto; }
+      .bd-chev.open { transform: rotate(180deg); }
+      @media (prefers-reduced-motion: reduce) { .bd-chev { transition: none; } }
+      .bd-selected {
+        display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between;
+        background: var(--accent-soft); border-radius: 8px; padding: 10px 12px; margin: 0 0 14px; font-size: .93rem;
+      }
+      .bd-selected strong { overflow-wrap: anywhere; }
+      .bd-detail { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 8px 0 6px; }
+      .bd-detail-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; font-size: .85rem; font-weight: 700; color: var(--ink-soft); margin-bottom: 4px; }
+      .bd-item { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: .92rem; }
+      .bd-item:last-child { border-bottom: none; }
+      .bd-item-date { color: var(--ink-faint); font-size: .82rem; white-space: nowrap; min-width: 84px; }
+      .bd-item-label { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+      .bd-item-amt { font-family: "IBM Plex Mono", monospace; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+      .bd-item-amt.pos { color: var(--pos); }
+      .bd-item-amt.neg { color: var(--neg); }
+      .bd-overall { margin-top: 18px; border-top: 2px solid var(--line); padding-top: 8px; }
+      .bd-overall-toggle {
+        display: flex; width: 100%; background: none; border: none; align-items: center; gap: 10px;
+        padding: 8px 0; font-weight: 700; font-size: 1rem; color: var(--ink); text-align: left; cursor: pointer; border-radius: 6px;
+      }
+      .bd-overall-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .bd-ov-count { margin-left: auto; color: var(--ink-soft); font-weight: 600; font-size: .88rem; white-space: nowrap; }
+      .bd-ov-note { color: var(--ink-faint); font-size: .85rem; margin: 6px 0 0; }
       footer { margin-top: 40px; color: var(--ink-faint); font-size: .85rem; text-align: center; }
 
       @media (max-width: 760px) {
@@ -1691,13 +1728,28 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         var active = fcView === "breakdown" ? $("fc-pane-breakdown") : $("fc-pane-graph");
         if (vp && active && active.offsetHeight) vp.style.height = active.offsetHeight + "px";
       }
-      function renderBreakdown(events, totalExp, range) {
-        var box = $("fc-breakdown");
-        if (!box) return;
-        var hint = $("fc-breakdown-total");
-        if (hint) hint.textContent = totalExp > 0
-          ? money(totalExp) + " in expenses · " + prettyDate(range.start) + " → " + prettyDate(range.end)
-          : "";
+      /* ---------- Interactive breakdown — shared by Forecast & History ----------
+         Tap a donut slice or a category row: the centre of the donut names the
+         category with its $ and %, the other slices dim, and that category
+         expands in the list to show only its items, in date order. Tap again
+         (or Minimize) to close it. Under the categories sits an expandable
+         "Everything in this window — in order" list, so the overall view is
+         always one tap away without leaving the breakdown. */
+      var bdState = { fc: { sel: null, overall: true }, hs: { sel: null, overall: true } };
+      function bdCatItems(events, cat) {
+        return events.filter(function (ev) { return ev.amount < 0 && (ev.category || "—") === cat; })
+          .slice().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : b.amount - a.amount; });
+      }
+      function bdItemRow(ev, showCat) {
+        return '<div class="bd-item"><span class="bd-item-date">' + esc(prettyDate(ev.date)) + '</span>' +
+          '<span class="bd-item-label">' + esc(ev.label) +
+          (showCat ? ' <span class="tag">' + esc(ev.category || "—") + '</span>' : '') +
+          (ev.source ? ' <span class="tag">' + esc(ev.source) + '</span>' : '') + '</span>' +
+          '<span class="bd-item-amt ' + (ev.amount >= 0 ? "pos" : "neg") + '">' + (ev.amount >= 0 ? "+" : "−") + esc(money(Math.abs(ev.amount)).replace("-", "")) + '</span></div>';
+      }
+      function buildBreakdown(box, kind, events, totalExp, range, emptyHtml, isHistory) {
+        var st = bdState[kind];
+        function rerender() { if (kind === "fc") renderForecast(); else renderHistory(); }
         var byCat = {};
         events.forEach(function (ev) {
           if (ev.amount >= 0) return;
@@ -1705,41 +1757,105 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
           byCat[cat] = (byCat[cat] || 0) + (-ev.amount);
         });
         var cats = Object.keys(byCat).sort(function (a, b) { return byCat[b] - byCat[a]; });
-        if (!cats.length || totalExp <= 0) {
-          box.innerHTML = '<div class="empty"><strong>No expenses in this timeframe</strong>' +
-            'Nothing outgoing is projected between ' + esc(prettyDate(range.start)) + ' and ' + esc(prettyDate(range.end)) +
-            ' for this account selection. Add recurring bills in the Recurring tab, or widen the timeframe above.</div>';
-          return;
-        }
-        /* Donut: one stroked circle per category, segments laid end to end. */
+        if (!cats.length || totalExp <= 0) { st.sel = null; box.innerHTML = emptyHtml; return; }
+        if (st.sel && !byCat[st.sel]) st.sel = null;
+        var sel = st.sel;
+        /* Donut: one stroked circle per category, segments laid end to end.
+           Each slice is a button — activating it selects that category. */
         var R = 80, C = 2 * Math.PI * R, cx = 106, cy = 106, segs = [], acc = 0;
         cats.forEach(function (cat) {
           var frac = byCat[cat] / totalExp;
           var len = Math.max(0, frac * C - (cats.length > 1 ? 2.5 : 0));
-          segs.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="none" stroke="' + catColor(cat) +
-            '" stroke-width="27" stroke-dasharray="' + len.toFixed(2) + ' ' + (C - len).toFixed(2) +
+          var isSel = sel === cat;
+          segs.push('<circle class="bd-seg' + (sel && !isSel ? " bd-dim" : "") + '" data-bd-seg="' + esc(cat) + '" tabindex="0" role="button" aria-pressed="' + (isSel ? "true" : "false") + '" aria-label="' + esc(cat) + ': ' + esc(money(byCat[cat])) + ', ' + (frac * 100).toFixed(1) + '% of expenses. Activate to ' + (isSel ? "close" : "see") + ' its items." cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="none" stroke="' + catColor(cat) +
+            '" stroke-width="' + (isSel ? 33 : 27) + '" stroke-dasharray="' + len.toFixed(2) + ' ' + (C - len).toFixed(2) +
             '" stroke-dashoffset="' + (-acc * C).toFixed(2) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')">' +
             '<title>' + esc(cat) + ': ' + esc(money(byCat[cat])) + ' (' + (frac * 100).toFixed(1) + '%)</title></circle>');
           acc += frac;
         });
-        var donut = '<div class="bd-donut"><svg viewBox="0 0 212 212" role="img" aria-label="Donut chart of expenses by category">' +
+        var center = sel
+          ? '<div class="bd-sel-cat" style="color:' + catColor(sel) + '">' + esc(sel) + '</div><div class="bd-total">' + (byCat[sel] / totalExp * 100).toFixed(1) + '%</div><div class="bd-cap">' + esc(money(byCat[sel])) + ' of expenses</div>'
+          : '<div class="bd-total">' + esc(money(totalExp)) + '</div><div class="bd-cap">Total expenses</div>';
+        var donut = '<div class="bd-donut"><svg viewBox="0 0 212 212" role="img" aria-label="Donut chart of expenses by category — each colour is selectable">' +
           '<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="none" stroke="var(--surface-2)" stroke-width="27"/>' +
           segs.join("") + '</svg>' +
-          '<div class="bd-center"><div class="bd-total">' + esc(money(totalExp)) + '</div><div class="bd-cap">Total expenses</div></div></div>';
+          '<div class="bd-center">' + center + '</div></div>';
         var top = cats[0], topPct = (byCat[top] / totalExp) * 100;
+        var topNote = isHistory
+          ? '<p class="bd-top-note"><strong>' + esc(top) + '</strong> was your biggest expense in this window at <strong>' + topPct.toFixed(1) + '%</strong> of everything that went out. Same colours as Forecast, so a category is always the same colour in both views.</p>'
+          : '<p class="bd-top-note"><strong>' + esc(top) + '</strong> is your biggest expense in this window at <strong>' + topPct.toFixed(1) + '%</strong> of everything going out. Percentages use the same timeframe and account as the projection graph.</p>';
+        var selBanner = "";
+        if (sel) {
+          var selItems = bdCatItems(events, sel);
+          selBanner = '<div class="bd-selected"><span><strong style="color:' + catColor(sel) + '">' + esc(sel) + '</strong> — ' +
+            esc(money(byCat[sel])) + ' · <strong>' + (byCat[sel] / totalExp * 100).toFixed(1) + '%</strong> of expenses · ' +
+            selItems.length + ' item' + (selItems.length === 1 ? "" : "s") + ', shown in date order under its category below.</span>' +
+            '<button type="button" class="btn ghost small" data-bd-close>Minimize</button></div>';
+        }
         var rows = cats.map(function (cat) {
           var pct = (byCat[cat] / totalExp) * 100;
           var col = catColor(cat);
-          return '<div class="bd-row"><div class="bd-head">' +
+          var isSel = sel === cat;
+          var detail = "";
+          if (isSel) {
+            var items = bdCatItems(events, cat);
+            detail = '<div class="bd-detail" role="region" aria-label="Items in ' + esc(cat) + '">' +
+              '<div class="bd-detail-head"><span>' + items.length + ' item' + (items.length === 1 ? "" : "s") + ' · in date order · total ' + esc(money(byCat[cat])) + '</span>' +
+              '<button type="button" class="btn ghost small" data-bd-close>Minimize</button></div>' +
+              items.map(function (ev) { return bdItemRow(ev, false); }).join("") + '</div>';
+          }
+          return '<div class="bd-row"><button type="button" class="bd-head bd-toggle" data-bd-toggle="' + esc(cat) + '" aria-expanded="' + (isSel ? "true" : "false") + '" aria-label="' + esc(cat) + ', ' + esc(money(byCat[cat])) + ', ' + pct.toFixed(1) + '% of expenses. ' + (isSel ? "Minimize its items." : "Show only its items.") + '">' +
             '<span class="bd-dot" style="background:' + col + '" aria-hidden="true"></span>' +
             '<span class="bd-name">' + esc(cat) + '</span>' +
             '<span class="bd-amt">' + esc(money(byCat[cat])) + '</span>' +
-            '<span class="bd-pct" style="color:' + col + '">' + pct.toFixed(1) + '%</span></div>' +
-            '<div class="bd-bar"><div style="width:' + pct.toFixed(1) + '%;background:' + col + '"></div></div></div>';
+            '<span class="bd-pct" style="color:' + col + '">' + pct.toFixed(1) + '%</span>' +
+            '<span class="bd-chev' + (isSel ? " open" : "") + '" aria-hidden="true">⌄</span></button>' +
+            '<div class="bd-bar"><div style="width:' + pct.toFixed(1) + '%;background:' + col + '"></div></div>' + detail + '</div>';
         }).join("");
-        box.innerHTML = '<p class="bd-top-note"><strong>' + esc(top) + '</strong> is your biggest expense in this window at <strong>' +
-          topPct.toFixed(1) + '%</strong> of everything going out. Percentages use the same timeframe and account as the projection graph.</p>' +
-          '<div class="bd-layout">' + donut + '<div class="bd-list">' + rows + '</div></div>';
+        /* Overall view, kept under the categories: everything in the window,
+           income and expenses, in date order. Collapsible like the categories. */
+        var ovCap = 150;
+        var ovRows = events.slice(0, ovCap).map(function (ev) { return bdItemRow(ev, true); }).join("");
+        var overall = '<div class="bd-overall">' +
+          '<button type="button" class="bd-overall-toggle" data-bd-overall aria-expanded="' + (st.overall ? "true" : "false") + '">' +
+          '<span>Everything in this window — in order</span>' +
+          '<span class="bd-ov-count">' + events.length + ' item' + (events.length === 1 ? "" : "s") + '</span>' +
+          '<span class="bd-chev' + (st.overall ? " open" : "") + '" aria-hidden="true">⌄</span></button>' +
+          (st.overall
+            ? '<div role="region" aria-label="All items in this window in date order">' + ovRows +
+              (events.length > ovCap ? '<p class="bd-ov-note">Showing the first ' + ovCap + ' of ' + events.length + ' items — the full list is in the table below the graph.</p>' : '') + '</div>'
+            : '') + '</div>';
+        box.innerHTML = topNote +
+          '<p class="bd-hint">Tap a colour on the donut, or tap a category below, to see only that category\'s items in date order. Tap it again — or Minimize — to close it back up.</p>' +
+          selBanner +
+          '<div class="bd-layout">' + donut + '<div class="bd-list">' + rows + '</div></div>' + overall;
+        function toggleCat(cat) { st.sel = st.sel === cat ? null : cat; rerender(); }
+        box.querySelectorAll("[data-bd-seg]").forEach(function (el) {
+          el.addEventListener("click", function () { toggleCat(el.getAttribute("data-bd-seg")); });
+          el.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCat(el.getAttribute("data-bd-seg")); }
+          });
+        });
+        box.querySelectorAll("[data-bd-toggle]").forEach(function (el) {
+          el.addEventListener("click", function () { toggleCat(el.getAttribute("data-bd-toggle")); });
+        });
+        box.querySelectorAll("[data-bd-close]").forEach(function (el) {
+          el.addEventListener("click", function () { st.sel = null; rerender(); });
+        });
+        var ovBtn = box.querySelector("[data-bd-overall]");
+        if (ovBtn) ovBtn.addEventListener("click", function () { st.overall = !st.overall; rerender(); });
+      }
+      function renderBreakdown(events, totalExp, range) {
+        var box = $("fc-breakdown");
+        if (!box) return;
+        var hint = $("fc-breakdown-total");
+        if (hint) hint.textContent = totalExp > 0
+          ? money(totalExp) + " in expenses · " + prettyDate(range.start) + " → " + prettyDate(range.end)
+          : "";
+        var emptyHtml = '<div class="empty"><strong>No expenses in this timeframe</strong>' +
+          'Nothing outgoing is projected between ' + esc(prettyDate(range.start)) + ' and ' + esc(prettyDate(range.end)) +
+          ' for this account selection. Add recurring bills in the Recurring tab, or widen the timeframe above.</div>';
+        buildBreakdown(box, "fc", events, totalExp, range, emptyHtml, false);
       }
       function fcRange() {
         var startEl = $("fc-start"), endEl = $("fc-end"), rangeEl = $("fc-range");
@@ -1938,32 +2054,8 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         if (!box) return;
         var hint = $("hs-breakdown-total");
         if (hint) hint.textContent = totalExp > 0 ? money(totalExp) + " in expenses · " + prettyDate(range.start) + " → " + prettyDate(range.end) : "";
-        var byCat = {};
-        events.forEach(function (ev) {
-          if (ev.amount >= 0) return;
-          var cat = ev.category || "—";
-          byCat[cat] = (byCat[cat] || 0) + (-ev.amount);
-        });
-        var cats = Object.keys(byCat).sort(function (a, b) { return byCat[b] - byCat[a]; });
-        if (!cats.length || totalExp <= 0) {
-          box.innerHTML = '<div class="empty"><strong>No expenses in this timeframe</strong>Nothing outgoing was recorded between ' + esc(prettyDate(range.start)) + ' and ' + esc(prettyDate(range.end)) + ' for this account selection. Add or post entries, or widen the timeframe above.</div>';
-          return;
-        }
-        var R = 80, C = 2 * Math.PI * R, cx = 106, cy = 106, segs = [], acc = 0;
-        cats.forEach(function (cat) {
-          var frac = byCat[cat] / totalExp;
-          var len = Math.max(0, frac * C - (cats.length > 1 ? 2.5 : 0));
-          segs.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="none" stroke="' + catColor(cat) + '" stroke-width="27" stroke-dasharray="' + len.toFixed(2) + ' ' + (C - len).toFixed(2) + '" stroke-dashoffset="' + (-acc * C).toFixed(2) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')"><title>' + esc(cat) + ': ' + esc(money(byCat[cat])) + ' (' + (frac * 100).toFixed(1) + '%)</title></circle>');
-          acc += frac;
-        });
-        var donut = '<div class="bd-donut"><svg viewBox="0 0 212 212" role="img" aria-label="Donut chart of historical expenses by category"><circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="none" stroke="var(--surface-2)" stroke-width="27"/>' + segs.join("") + '</svg><div class="bd-center"><div class="bd-total">' + esc(money(totalExp)) + '</div><div class="bd-cap">Total expenses</div></div></div>';
-        var top = cats[0], topPct = (byCat[top] / totalExp) * 100;
-        var rows = cats.map(function (cat) {
-          var pct = (byCat[cat] / totalExp) * 100;
-          var col = catColor(cat);
-          return '<div class="bd-row"><div class="bd-head"><span class="bd-dot" style="background:' + col + '" aria-hidden="true"></span><span class="bd-name">' + esc(cat) + '</span><span class="bd-amt">' + esc(money(byCat[cat])) + '</span><span class="bd-pct" style="color:' + col + '">' + pct.toFixed(1) + '%</span></div><div class="bd-bar"><div style="width:' + pct.toFixed(1) + '%;background:' + col + '"></div></div></div>';
-        }).join("");
-        box.innerHTML = '<p class="bd-top-note"><strong>' + esc(top) + '</strong> was your biggest expense in this window at <strong>' + topPct.toFixed(1) + '%</strong> of everything that went out. Same colours as Forecast, so a category is always the same colour in both views.</p><div class="bd-layout">' + donut + '<div class="bd-list">' + rows + '</div></div>';
+        var emptyHtml = '<div class="empty"><strong>No expenses in this timeframe</strong>Nothing outgoing was recorded between ' + esc(prettyDate(range.start)) + ' and ' + esc(prettyDate(range.end)) + ' for this account selection. Add or post entries, or widen the timeframe above.</div>';
+        buildBreakdown(box, "hs", events, totalExp, range, emptyHtml, true);
       }
       function renderHistoryMonths(events, range) {
         var box = $("hs-months"), empty = $("hs-months-empty");
