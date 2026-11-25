@@ -357,6 +357,30 @@
       .fc-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 14px 0 4px; }
       @media (max-width: 760px) { .fc-stats { grid-template-columns: repeat(2, 1fr); } }
       .fc-note { color: var(--ink-soft); font-size: .88rem; margin: 8px 0 0; }
+      .chart-tip .tip-budget { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: .88rem; margin-top: 3px; font-variant-numeric: tabular-nums; }
+      .chart-tip .tip-budget span:first-child { font-family: "Public Sans", sans-serif; font-weight: 600; font-size: .76rem; color: var(--ink-faint); display: block; }
+      .chart-tip .tip-budget .tip-budget-amt { display: block; }
+      /* Budgets in the forecast — current spending vs. maxing every budget */
+      .fc-budget-box {
+        margin-top: 14px; border: 1px solid var(--warn); background: var(--warn-soft);
+        border-radius: var(--radius); padding: 14px 16px;
+      }
+      .fc-budget-box .fb-title { font-weight: 700; font-size: 1rem; }
+      .fc-budget-box .fb-sub { color: var(--ink-soft); font-size: .9rem; margin-top: 3px; line-height: 1.5; }
+      .fc-budget-compare {
+        display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px 14px; align-items: center; margin-top: 12px;
+      }
+      @media (max-width: 640px) { .fc-budget-compare { grid-template-columns: 1fr; } .fc-budget-compare .fb-vs { text-align: center; } }
+      .fb-scenario { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 11px 13px; min-width: 0; }
+      .fb-scenario.max { border-color: var(--warn); }
+      .fb-scenario .fb-label { font-size: .76rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-faint); line-height: 1.35; }
+      .fb-scenario .fb-val { font-family: "IBM Plex Mono", monospace; font-weight: 700; font-size: 1.3rem; font-variant-numeric: tabular-nums; margin-top: 3px; overflow-wrap: anywhere; }
+      .fb-scenario .fb-val.neg { color: var(--neg); }
+      .fb-scenario .fb-note { color: var(--ink-soft); font-size: .85rem; margin-top: 2px; }
+      .fc-budget-compare .fb-vs { font-weight: 700; color: var(--ink-faint); font-size: 1.05rem; }
+      .fc-budget-detail { margin-top: 16px; }
+      .fc-budget-detail h3 { font-size: 1rem; margin: 0 0 4px; }
+      .fc-budget-detail .fb-detail-sub { color: var(--ink-soft); font-size: .9rem; margin: 0 0 8px; line-height: 1.5; }
       .period-hero {
         background: var(--accent-soft); border-radius: var(--radius);
         padding: 16px 18px; margin-bottom: 6px;
@@ -718,7 +742,7 @@
       <!-- ============ BUDGETS ============ -->
       <section class="panel" id="panel-budgets" role="tabpanel">
         <h2>Monthly budgets</h2>
-        <p class="panel-intro">Set a monthly limit per spending category. Bars track the current month and turn amber as you approach the limit, red when you pass it.</p>
+        <p class="panel-intro">Set a monthly limit per spending category. Bars track the current month and turn amber as you approach the limit, red when you pass it. Budgets also feed the Forecast: at each month-end there, whatever is left of the month's budget is taken out to show your balance <em>if you maxed every budget</em>, next to the balance at your current spending — spending already logged counts toward the budget first, so nothing is double-counted.</p>
         <div class="card" id="budget-list-card">
           <div id="budget-list"></div>
           <div class="empty" id="budget-empty">
@@ -814,11 +838,11 @@
       <!-- ============ FORECAST ============ -->
       <section class="panel" id="panel-forecast" role="tabpanel">
         <h2>Forecast &amp; pay periods</h2>
-        <p class="panel-intro">Project your balance over any timeframe you pick, using your current balances plus your recurring income and bills — and see exactly which expenses land between one payday and the next.</p>
+        <p class="panel-intro">Project your balance over any timeframe you pick, using your current balances plus your recurring income and bills — and see exactly which expenses land between one payday and the next. Your monthly budgets are in here too: the forecast shows both your balance at your current spending, and the lower balance you'd land on if you maxed every budget.</p>
 
         <div class="card">
           <h2 style="font-size:1.1rem">Balance projection</h2>
-          <p class="fineprint" style="margin:2px 0 14px">Pick a timeframe and the balance is projected day by day: every recurring transaction that falls inside it is applied on its due date, along with any ledger entries already dated inside it.</p>
+          <p class="fineprint" style="margin:2px 0 14px">Pick a timeframe and the balance is projected day by day: every recurring transaction that falls inside it is applied on its due date, along with any ledger entries already dated inside it. Budgets don't have a due date, so they aren't posted on a day — instead, at each <strong>month-end</strong> inside the timeframe, whatever is left of that month's budget (the limit minus what's already counted for that category that month) is taken out in one lump for the “if maxing budget” line. Spending you've already logged counts toward the budget first, so a category is never double-counted.</p>
           <div class="fc-controls">
             <label class="field">Timeframe
               <select id="fc-range">
@@ -841,13 +865,14 @@
             </label>
           </div>
           <div class="fc-stats">
-            <div class="stat"><div class="label">Projected balance</div><div class="value" id="fc-end-bal">$0.00</div></div>
+            <div class="stat"><div class="label">Projected balance — current spending</div><div class="value" id="fc-end-bal">$0.00</div></div>
             <div class="stat"><div class="label">Net change</div><div class="value" id="fc-net">$0.00</div></div>
             <div class="stat"><div class="label">Income in period</div><div class="value pos" id="fc-inc">$0.00</div></div>
             <div class="stat"><div class="label">Expenses in period</div><div class="value neg" id="fc-exp">$0.00</div></div>
           </div>
+          <div id="fc-budget-summary" aria-live="polite"></div>
           <p class="fc-note" id="fc-lowest"></p>
-          <p class="fc-note"><strong>Reading the graph:</strong> move your cursor (or finger) along the line — it will show you the <strong>date and the estimated balance in the account on that date</strong>. The balance holds steady between transactions and steps up or down on the day money moves.</p>
+          <p class="fc-note"><strong>Reading the graph:</strong> move your cursor (or finger) along the line — it will show you the <strong>date and the estimated balance in the account on that date</strong>. The solid line is your current-spending forecast; the dashed line is the same forecast if you max every budget, dropping at each month-end when the leftover budget is taken out. The balance holds steady between transactions and steps up or down on the day money moves.</p>
           <div class="fc-view-bar">
             <div class="fc-toggle" role="tablist" aria-label="Forecast view">
               <button type="button" role="tab" id="fc-view-graph" aria-selected="true">Projection graph</button>
@@ -877,6 +902,7 @@
             <strong>Nothing projected in this timeframe</strong>
             No recurring transactions or dated ledger entries fall inside it. Add recurring bills and paycheques in the Recurring tab and they'll show up here.
           </div>
+          <div class="fc-budget-detail" id="fc-budget-detail"></div>
         </div>
 
         <div class="card">
@@ -2155,6 +2181,104 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         });
         return events;
       }
+      /* ---------- Budgets in the forecast ----------
+         A budget has no due date, so it is never "posted" on a day of its
+         own. Instead, for every month the forecast window touches, each
+         budgeted category contributes ONE month-end deduction equal to
+         what's left of that month's limit:
+             extra = max(0, limit − already counted for that category
+                          in that month)
+         "Already counted" is every expense for the category in that month
+         from the 1st up to the posting date — ledger entries plus
+         recurring occurrences — so money the forecast already takes out
+         (or that's already spent) is never taken out twice. The result
+         is a second, lower forecast line: the balance if you spent right
+         up to every budget. The current-spending line is untouched. */
+      function occurrencesAnywhere(r, start, end) {
+        /* occurrencesBetween, but also steps backwards from nextDate, so
+           occurrences earlier in a month (whose nextDate has since moved
+           on) still count toward that month's budget total. */
+        var out = [];
+        if (!r || !r.nextDate || start > end) return out;
+        var cursor = r.nextDate, guard = 0;
+        while (cursor > end && guard < 1200) { cursor = prevDate(cursor, r.freq); guard++; }
+        guard = 0;
+        while (advanceDate(cursor, r.freq) <= end && guard < 1200) { cursor = advanceDate(cursor, r.freq); guard++; }
+        guard = 0;
+        while (cursor >= start && guard < 1200) {
+          var pv = prevDate(cursor, r.freq);
+          if (pv >= start && pv < cursor) { cursor = pv; guard++; } else break;
+        }
+        guard = 0;
+        while (cursor <= end && guard < 1200) {
+          if (cursor >= start && !isSkippedDate(r, cursor)) out.push(cursor);
+          cursor = advanceDate(cursor, r.freq); guard++;
+        }
+        return out;
+      }
+      function budgetMonthEndStr(mk) {
+        var y = Number(mk.slice(0, 4)), m = Number(mk.slice(5, 7));
+        var last = new Date(y, m, 0).getDate();
+        return mk + "-" + String(last).padStart(2, "0");
+      }
+      function categoryCountedIn(cat, from, to, accountId) {
+        var total = 0;
+        state.transactions.forEach(function (t) {
+          if (t.kind !== "expense" || t.category !== cat) return;
+          if (t.date < from || t.date > to) return;
+          if (accountId && t.accountId !== accountId) return;
+          total += Number(t.amount) || 0;
+        });
+        state.recurring.forEach(function (r) {
+          if (r.kind !== "expense" || (r.category || "—") !== cat) return;
+          if (accountId && r.accountId !== accountId) return;
+          total += occurrencesAnywhere(r, from, to).length * (Number(r.amount) || 0);
+        });
+        return total;
+      }
+      function buildBudgetForecast(range, accountId) {
+        var cats = Object.keys(state.budgets).filter(function (c) { return (Number(state.budgets[c]) || 0) > 0; }).sort();
+        var out = { has: cats.length > 0, cats: cats, rows: [], events: [], totalLimit: 0, totalCounted: 0, totalRemaining: 0, months: [] };
+        if (!out.has) return out;
+        /* Every calendar month the window touches */
+        var mk = monthKey(range.start), endMk = monthKey(range.end), guard = 0;
+        while (mk <= endMk && guard < 240) {
+          out.months.push(mk);
+          var y = Number(mk.slice(0, 4)), m = Number(mk.slice(5, 7));
+          var nm = new Date(y, m, 1);
+          mk = nm.getFullYear() + "-" + String(nm.getMonth() + 1).padStart(2, "0");
+          guard++;
+        }
+        out.months.forEach(function (month) {
+          var mStart = month + "-01";
+          var mEnd = budgetMonthEndStr(month);
+          /* Posted at month-end — or on the last day of the window when
+             the window ends before the month does. */
+          var postDate = mEnd <= range.end ? mEnd : range.end;
+          cats.forEach(function (cat) {
+            var limit = Number(state.budgets[cat]) || 0;
+            var counted = categoryCountedIn(cat, mStart, postDate, accountId);
+            var remaining = Math.max(0, limit - counted);
+            remaining = Math.round(remaining * 100) / 100;
+            out.rows.push({ month: month, category: cat, limit: limit, counted: counted, remaining: remaining, postDate: postDate });
+            out.totalLimit += limit;
+            out.totalCounted += counted;
+            out.totalRemaining += remaining;
+            if (remaining > 0) {
+              out.events.push({
+                date: postDate, label: "Budget max — " + cat + " (" + monthLabel(month) + ")",
+                category: cat, source: "Budget", amount: -remaining, isBudget: true
+              });
+            }
+          });
+        });
+        out.events.sort(function (a, b) {
+          if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+          return a.category < b.category ? -1 : 1;
+        });
+        out.totalRemaining = Math.round(out.totalRemaining * 100) / 100;
+        return out;
+      }
       function renderForecast() {
         if (!$("fc-start")) return;
         /* Account filter options (preserve selection) */
@@ -2180,23 +2304,70 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         });
         var endBal = bal, net = endBal - startBal;
 
+        /* Budgets: a second scenario on top of the current-spending one.
+           Budget deductions land at each month-end, so the max-budget
+           line follows the normal line, then steps down at month-ends. */
+        var budgetFc = buildBudgetForecast(range, accountId);
+        var maxEndBal = Math.round((endBal - budgetFc.totalRemaining) * 100) / 100;
+        var combined = events.concat(budgetFc.events).sort(function (a, b) {
+          if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+          if (!!a.isBudget !== !!b.isBudget) return a.isBudget ? 1 : -1; /* budgets post after that day's regular moves */
+          return b.amount - a.amount;
+        });
+        var balMax = startBal, lowestMax = startBal, lowestMaxDate = range.start;
+        var dayBalMax = [{ date: range.start, bal: startBal }];
+        combined.forEach(function (ev) {
+          balMax += ev.amount;
+          if (balMax < lowestMax) { lowestMax = balMax; lowestMaxDate = ev.date; }
+          if (dayBalMax[dayBalMax.length - 1].date === ev.date) dayBalMax[dayBalMax.length - 1].bal = balMax;
+          else dayBalMax.push({ date: ev.date, bal: balMax });
+        });
+
         $("fc-end-bal").textContent = money(endBal);
         $("fc-end-bal").className = "value" + (endBal < 0 ? " neg" : "");
         $("fc-net").textContent = (net > 0 ? "+" : "") + money(net);
         $("fc-net").className = "value" + (net < 0 ? " neg" : net > 0 ? " pos" : "");
         $("fc-inc").textContent = money(inc);
         $("fc-exp").textContent = money(exp);
+        /* The comparison the whole feature exists for, in one line:
+           If maxing budget = X  //  Current spending = Y */
+        var fbBox = $("fc-budget-summary");
+        if (fbBox) {
+          if (!budgetFc.has) {
+            fbBox.innerHTML = '<div class="fc-budget-box"><div class="fb-title">Budgets aren\'t in this forecast yet</div>' +
+              '<div class="fb-sub">You have no monthly budgets set. Add one in the <strong>Budgets</strong> tab (e.g. Groceries $800/month) and this forecast will also show the balance you\'d land on if you maxed it — the leftover budget is taken out at each month-end, on top of your current-spending line.</div></div>';
+          } else {
+            fbBox.innerHTML = '<div class="fc-budget-box"><div class="fb-title">If maxing budget = ' + esc(money(maxEndBal)) + ' &nbsp;//&nbsp; Current spending = ' + esc(money(endBal)) + '</div>' +
+              '<div class="fb-sub">Forecasted balance at ' + esc(prettyDate(range.end)) + ' two ways. <strong>Current spending</strong> is the projection above, from your recurring bills and dated entries. <strong>If maxing budget</strong> takes out what\'s left of every monthly budget at each month-end — ' +
+              esc(money(budgetFc.totalLimit)) + ' of budgets across ' + budgetFc.months.length + ' month' + (budgetFc.months.length === 1 ? "" : "s") + ' in this window, minus ' + esc(money(budgetFc.totalCounted)) + ' already counted for those categories in those months, so an extra <strong>' + esc(money(budgetFc.totalRemaining)) + '</strong> comes out' +
+              (accountId ? ' (counted for the selected account only)' : '') +
+              (budgetFc.totalRemaining <= 0 ? ' — nothing extra, because those categories are already at or over budget in every month shown' : '') +
+              '. Per-category detail is under the projected entries below.</div>' +
+              '<div class="fc-budget-compare">' +
+              '<div class="fb-scenario max"><div class="fb-label">If maxing budget — forecasted balance</div><div class="fb-val' + (maxEndBal < 0 ? " neg" : "") + '">' + esc(money(maxEndBal)) + '</div><div class="fb-note">Every budget spent right up to its limit</div></div>' +
+              '<div class="fb-vs" aria-hidden="true">//</div>' +
+              '<div class="fb-scenario"><div class="fb-label">Current spending — forecasted balance</div><div class="fb-val' + (endBal < 0 ? " neg" : "") + '">' + esc(money(endBal)) + '</div><div class="fb-note">Only what\'s already logged or recurring</div></div>' +
+              '</div></div>';
+          }
+        }
         $("fc-lowest").innerHTML = events.length
           ? "Starts at <strong>" + esc(money(startBal)) + "</strong> on " + esc(prettyDate(range.start)) +
             " · lowest point <strong>" + esc(money(lowest)) + "</strong> on " + esc(prettyDate(lowestDate)) +
-            (lowest < 0 ? " — the projection dips below zero in this window." : "")
-          : "Starting balance in this window: <strong>" + esc(money(startBal)) + "</strong>.";
+            (lowest < 0 ? " — the projection dips below zero in this window." : "") +
+            (budgetFc.has && budgetFc.totalRemaining > 0
+              ? " If you maxed every budget, the lowest point would be <strong>" + esc(money(lowestMax)) + "</strong> on " + esc(prettyDate(lowestMaxDate)) + "."
+              : "")
+          : "Starting balance in this window: <strong>" + esc(money(startBal)) + "</strong>." +
+            (budgetFc.has && budgetFc.totalRemaining > 0
+              ? " If you maxed every budget, you'd end at <strong>" + esc(money(maxEndBal)) + "</strong>."
+              : "");
 
         /* ---- Projection chart (hand-built SVG) ---- */
         var W = 640, H = 230, top = 18, base = 192, left = 6, right = 634;
         var spanDays = Math.max(1, dayDiff(range.start, range.end));
         var minV = Math.min(startBal, lowest), maxV = Math.max(startBal, endBal);
         dayBal.forEach(function (p) { minV = Math.min(minV, p.bal); maxV = Math.max(maxV, p.bal); });
+        if (budgetFc.has) dayBalMax.forEach(function (p) { minV = Math.min(minV, p.bal); maxV = Math.max(maxV, p.bal); });
         if (maxV - minV < 1) { maxV += 1; minV -= 1; }
         var pad = (maxV - minV) * 0.12; maxV += pad; minV -= pad;
         function X(dstr) { return left + (dayDiff(range.start, dstr) / spanDays) * (right - left); }
@@ -2211,9 +2382,17 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
           parts.push('<text x="' + right + '" y="' + (Y(0) - 4) + '" text-anchor="end" font-size="10" fill="var(--neg)">$0</text>');
         }
         parts.push('<line x1="' + left + '" y1="' + base + '" x2="' + right + '" y2="' + base + '" stroke="var(--line)" stroke-width="2"/>');
+        if (budgetFc.has && budgetFc.totalRemaining > 0) {
+          var ptsMax = [];
+          ptsMax.push(X(range.start).toFixed(1) + "," + Y(startBal).toFixed(1));
+          dayBalMax.forEach(function (p) { ptsMax.push(X(p.date).toFixed(1) + "," + Y(p.bal).toFixed(1)); });
+          ptsMax.push(X(range.end).toFixed(1) + "," + Y(maxEndBal).toFixed(1));
+          parts.push('<polyline points="' + ptsMax.join(" ") + '" fill="none" stroke="var(--warn)" stroke-width="2.5" stroke-dasharray="7 5" stroke-linejoin="round" stroke-linecap="round"/>');
+          parts.push('<circle cx="' + X(range.end) + '" cy="' + Y(maxEndBal) + '" r="4" fill="var(--warn)"><title>If maxing budget ' + esc(money(maxEndBal)) + '</title></circle>');
+        }
         parts.push('<polyline points="' + pts.join(" ") + '" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>');
         parts.push('<circle cx="' + X(range.start) + '" cy="' + Y(startBal) + '" r="4" fill="var(--accent)"><title>Start ' + esc(money(startBal)) + '</title></circle>');
-        parts.push('<circle cx="' + X(range.end) + '" cy="' + Y(endBal) + '" r="4" fill="var(--accent)"><title>Projected ' + esc(money(endBal)) + '</title></circle>');
+        parts.push('<circle cx="' + X(range.end) + '" cy="' + Y(endBal) + '" r="4" fill="var(--accent)"><title>Projected (current spending) ' + esc(money(endBal)) + '</title></circle>');
         /* Hover layer: guide line + dot follow the cursor, tooltip shows date + balance */
         parts.push('<line id="fc-hover-line" x1="0" y1="' + top + '" x2="0" y2="' + base + '" stroke="var(--ink-faint)" stroke-width="1" stroke-dasharray="3 3" style="display:none"/>');
         parts.push('<circle id="fc-hover-dot" r="6" fill="var(--surface)" stroke="var(--accent)" stroke-width="3" style="display:none"/>');
@@ -2222,9 +2401,12 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         parts.push('<text x="' + right + '" y="12" text-anchor="end" font-size="11" fill="var(--ink-faint)">Low ' + esc(money(minV + pad)) + '</text>');
         parts.push('<text x="' + left + '" y="' + (base + 20) + '" font-size="12" fill="var(--ink-soft)">' + esc(prettyDate(range.start)) + '</text>');
         parts.push('<text x="' + right + '" y="' + (base + 20) + '" text-anchor="end" font-size="12" fill="var(--ink-soft)">' + esc(prettyDate(range.end)) + '</text>');
-        parts.push('<text x="' + (W / 2) + '" y="' + (base + 38) + '" text-anchor="middle" font-size="12" font-weight="600" fill="' + (endBal >= startBal ? "var(--pos)" : "var(--neg)") + '">Projected ' + esc(money(endBal)) + ' by ' + esc(prettyDate(range.end)) + '</text>');
-        $("fc-chart").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="Line chart of projected balance from ' + esc(prettyDate(range.start)) + ' to ' + esc(prettyDate(range.end)) + '. Move along the line to read the estimated balance on any date.">' + parts.join("") + '</svg>' +
-          '<div class="chart-tip" id="fc-tip" role="status"><div class="tip-date"></div><div class="tip-amt"></div><div class="tip-sub">estimated in account</div></div>';
+        parts.push('<text x="' + (W / 2) + '" y="' + (base + 38) + '" text-anchor="middle" font-size="12" font-weight="600" fill="' + (endBal >= startBal ? "var(--pos)" : "var(--neg)") + '">Projected ' + esc(money(endBal)) + ' by ' + esc(prettyDate(range.end)) + (budgetFc.has && budgetFc.totalRemaining > 0 ? ' · If maxing budget: ' + esc(money(maxEndBal)) : '') + '</text>');
+        if (budgetFc.has && budgetFc.totalRemaining > 0) {
+          parts.push('<text x="' + left + '" y="' + (base + 55) + '" font-size="11" fill="var(--ink-soft)"><tspan fill="var(--accent)">━━</tspan> Current spending&nbsp;&nbsp;<tspan fill="var(--warn)">┅┅</tspan> If maxing budget (drops at month-end)</text>');
+        }
+        $("fc-chart").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + (budgetFc.has && budgetFc.totalRemaining > 0 ? H + 26 : H) + '" style="width:100%;height:auto;display:block" role="img" aria-label="Line chart of projected balance from ' + esc(prettyDate(range.start)) + ' to ' + esc(prettyDate(range.end)) + '. Solid line is current spending; dashed line is if you max every budget. Move along the line to read the estimated balance on any date.">' + parts.join("") + '</svg>' +
+          '<div class="chart-tip" id="fc-tip" role="status"><div class="tip-date"></div><div class="tip-amt"></div><div class="tip-sub">current spending — estimated in account</div><div class="tip-budget" style="display:none"><span>if maxing budget</span><span class="tip-budget-amt"></span></div></div>';
         /* Wire the hover: balance on any date = balance after the last
            transaction on or before that date (flat between moves). */
         (function () {
@@ -2234,6 +2416,11 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
           function balOn(dstr) {
             var b = startBal;
             for (var i = 0; i < dayBal.length; i++) { if (dayBal[i].date <= dstr) b = dayBal[i].bal; else break; }
+            return b;
+          }
+          function balMaxOn(dstr) {
+            var b = startBal;
+            for (var i = 0; i < dayBalMax.length; i++) { if (dayBalMax[i].date <= dstr) b = dayBalMax[i].bal; else break; }
             return b;
           }
           function show(clientX) {
@@ -2252,9 +2439,16 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
             var amtEl = tip.querySelector(".tip-amt");
             amtEl.textContent = money(b);
             amtEl.style.color = b < 0 ? "var(--neg)" : "var(--ink)";
+            var budgetTip = tip.querySelector(".tip-budget");
+            if (budgetTip && budgetFc.has && budgetFc.totalRemaining > 0) {
+              var bm = balMaxOn(dstr);
+              budgetTip.style.display = "block";
+              var bmEl = budgetTip.querySelector(".tip-budget-amt");
+              if (bmEl) { bmEl.textContent = money(bm); bmEl.style.color = bm < 0 ? "var(--neg)" : "var(--warn)"; }
+            } else if (budgetTip) { budgetTip.style.display = "none"; }
             tip.style.display = "block";
             tip.style.left = (px / W * 100) + "%";
-            tip.style.top = (py / H * rect.height) + "px";
+            tip.style.top = (py / (svg.viewBox && svg.viewBox.baseVal && svg.viewBox.baseVal.height ? svg.viewBox.baseVal.height : H) * rect.height) + "px";
             /* Keep the tooltip on the chart near the edges */
             var frac = px / W;
             var tx = frac < 0.16 ? "-12%" : frac > 0.84 ? "-88%" : "-50%";
@@ -2287,6 +2481,33 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         }).join("") + (events.length > shown.length
           ? '<tr><td colspan="6" style="color:var(--ink-faint)">Showing the first ' + shown.length + ' of ' + events.length + ' projected entries — shorten the timeframe to see the rest.</td></tr>'
           : "");
+        /* ---- Budget deductions detail (the max-budget scenario) ---- */
+        var fbDetail = $("fc-budget-detail");
+        if (fbDetail) {
+          if (!budgetFc.has) {
+            fbDetail.innerHTML = "";
+          } else {
+            var runMax = startBal;
+            /* Running max-budget balance at each posting date, for the table */
+            var maxAtDate = {};
+            combined.forEach(function (ev) { runMax += ev.amount; maxAtDate[ev.date] = runMax; });
+            var detailRows = budgetFc.rows.map(function (row) {
+              var over = row.counted > row.limit;
+              return '<tr>' +
+                '<td>' + esc(prettyDate(row.postDate)) + '<br><span style="color:var(--ink-faint);font-size:.82rem">' + esc(monthLabel(row.month)) + ' month-end</span></td>' +
+                '<td><span class="tag">' + esc(row.category) + '</span></td>' +
+                '<td class="amt">' + esc(money(row.limit)) + '</td>' +
+                '<td class="amt">' + esc(money(row.counted)) + (over ? '<br><span style="color:var(--neg);font-size:.8rem;font-family:\'Public Sans\',sans-serif">over budget — $0 extra</span>' : '') + '</td>' +
+                '<td class="amt neg">' + (row.remaining > 0 ? "−" + esc(money(row.remaining).replace("-", "")) : esc(money(0))) + '</td>' +
+                '<td class="amt">' + esc(money(maxAtDate[row.postDate] != null ? maxAtDate[row.postDate] : maxEndBal)) + '</td>' +
+                '</tr>';
+            }).join("");
+            fbDetail.innerHTML = '<h3>Budget deductions — if maxing budget</h3>' +
+              '<p class="fb-detail-sub">No posting day had to be invented for budgets: each one is taken out <strong>at month-end</strong> (or on the last day of this timeframe, if the timeframe ends mid-month), as a single lump equal to the limit minus what\'s already counted for that category that month — ledger spending plus recurring items in that category, from the 1st of the month up to the posting date. That\'s why the total taken out here (' + esc(money(budgetFc.totalRemaining)) + ') plus what\'s already counted (' + esc(money(budgetFc.totalCounted)) + ') brings each category up to — never past — its full budget. The last column is your balance on the max-budget (dashed) line right after that month-end deduction.</p>' +
+              '<table class="ledger" aria-label="Budget deductions applied in the max-budget forecast"><thead><tr><th>Posted</th><th>Category</th><th class="amt">Monthly budget</th><th class="amt">Already counted that month</th><th class="amt">Extra taken out</th><th class="amt">Balance if maxing</th></tr></thead><tbody>' + detailRows + '</tbody></table>' +
+              '<p class="fc-note" style="margin-top:10px"><strong>If maxing budget = ' + esc(money(maxEndBal)) + ' &nbsp;//&nbsp; Current spending = ' + esc(money(endBal)) + '</strong> at ' + esc(prettyDate(range.end)) + ' — a difference of ' + esc(money(budgetFc.totalRemaining)) + '.</p>';
+          }
+        }
         renderPayPeriods();
       }
       /* ---------- History (Forecast, but backwards) ---------- */
