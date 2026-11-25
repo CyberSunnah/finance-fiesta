@@ -271,6 +271,18 @@
       }
       .filters input[type="search"] { flex: 1 1 200px; }
 
+      .acct-select {
+        padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface);
+        color: var(--ink); font-size: .88rem; max-width: 190px; min-height: 36px;
+      }
+      .acct-select:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+      .from-label { font-size: .82rem; font-weight: 600; color: var(--ink-faint); white-space: nowrap; }
+      .cc-pay { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+      .cc-pay label { font-size: .82rem; font-weight: 600; color: var(--ink-soft); display: block; }
+      .cc-pay select, .cc-pay input {
+        display: block; margin-top: 4px; padding: 7px 9px; border: 1px solid var(--line);
+        border-radius: 7px; background: var(--surface); color: var(--ink); min-height: 38px; max-width: 170px;
+      }
       /* ---------- Budgets ---------- */
       .budget-row { padding: 12px 0; border-bottom: 1px solid var(--line); }
       .budget-row:last-child { border-bottom: none; }
@@ -649,7 +661,11 @@
       <!-- ============ ACCOUNTS ============ -->
       <section class="panel active" id="panel-accounts" role="tabpanel">
         <h2>Accounts</h2>
-        <p class="panel-intro">Chequing, savings, credit cards, cash, investments, loans — each balance updates live from the ledger. For debts (credit cards, loans), enter what you owe as a negative opening balance.</p>
+        <p class="panel-intro">Chequing, savings, credit cards, cash, investments, loans — each balance updates live from the ledger. For debts (credit cards, loans), enter what you owe as a negative opening balance — e.g. a card with $1,200 owing starts at −$1,200.</p>
+        <div class="card" style="margin-bottom:14px">
+          <h2 style="font-size:1.1rem">How credit cards work here</h2>
+          <p class="fineprint" style="margin:4px 0 0">1. Add the card as an account with Type <strong>Credit Card</strong> and its current balance owing as a negative opening balance. New purchases on the card are just Expenses on that card account — the amount owing goes up. &nbsp; 2. To pay it, use <strong>Pay this card</strong> on the card below (or a Transfer in the Ledger): pick the bank account the money comes out of, e.g. Tangerine, and the amount. One entry does both sides at once — Tangerine goes down by that amount <em>and</em> the card owing goes down by the same amount. &nbsp; 3. For a regular payment, set it up once in <strong>Recurring</strong> as a Transfer — Tangerine → your card — and each Post moves money the same way.</p>
+        </div>
         <div class="acct-list" id="acct-list"></div>
         <div class="empty" id="acct-empty">
           <strong>No accounts yet</strong>
@@ -681,7 +697,7 @@
       <!-- ============ LEDGER ============ -->
       <section class="panel" id="panel-ledger" role="tabpanel">
         <h2>Ledger</h2>
-        <p class="panel-intro">Every income, expense, and transfer. Mark entries cleared once they show up on your bank statement. Deleting an entry here removes only that one entry — if it was posted from a recurring item, the series in the Recurring tab keeps going; use Skip next over there to miss a single future occurrence.</p>
+        <p class="panel-intro">Every income, expense, and transfer. A <strong>Transfer</strong> is how you pay a credit card: set Account to the bank account paying (e.g. Tangerine) and To account to the card — the one entry lowers the bank balance and pays the same amount off the card. Mark entries cleared once they show up on your bank statement. Deleting an entry here removes only that one entry — if it was posted from a recurring item, the series in the Recurring tab keeps going; use Skip next over there to miss a single future occurrence.</p>
         <div class="card">
           <h2 style="font-size:1.1rem">Add a transaction</h2>
           <form id="form-txn">
@@ -742,7 +758,7 @@
       <!-- ============ BUDGETS ============ -->
       <section class="panel" id="panel-budgets" role="tabpanel">
         <h2>Monthly budgets</h2>
-        <p class="panel-intro">Set a monthly limit per spending category. Bars track the current month and turn amber as you approach the limit, red when you pass it. Budgets also feed the Forecast: at each month-end there, whatever is left of the month's budget is taken out to show your balance <em>if you maxed every budget</em>, next to the balance at your current spending — spending already logged counts toward the budget first, so nothing is double-counted.</p>
+        <p class="panel-intro">Set a monthly limit per spending category, and pick which account that spending comes out of — use the “Comes out of” dropdown next to each budget to change it any time. Bars track the current month and turn amber as you approach the limit, red when you pass it. Budgets also feed the Forecast: at each month-end there, whatever is left of the month's budget is taken out of its account to show your balance <em>if you maxed every budget</em>, next to the balance at your current spending — spending already logged counts toward the budget first, so nothing is double-counted.</p>
         <div class="card" id="budget-list-card">
           <div id="budget-list"></div>
           <div class="empty" id="budget-empty">
@@ -753,12 +769,15 @@
         <div class="card">
           <h2 style="font-size:1.1rem">Set a budget</h2>
           <form id="form-budget">
-            <div class="row">
+            <div class="row-3">
               <label class="field">Category
                 <select name="category" id="budget-category"></select>
               </label>
               <label class="field">Monthly limit ($)
                 <input name="limit" type="number" step="0.01" min="0.01" required placeholder="0.00" />
+              </label>
+              <label class="field">Comes out of (account)
+                <select name="account" id="budget-account"></select>
               </label>
             </div>
             <button class="btn" type="submit">Save budget</button>
@@ -785,7 +804,7 @@
       <!-- ============ RECURRING ============ -->
       <section class="panel" id="panel-recurring" role="tabpanel">
         <h2>Recurring transactions</h2>
-        <p class="panel-intro">Rent, subscriptions, paycheques — set them up once, then post each one to the ledger with a single tap when it comes due. <strong>Skip next</strong> misses just the one occurrence shown — nothing is posted to the ledger, and the series carries on from the date after. <strong>Delete series</strong> is the one that removes them all: every future occurrence goes, and the item disappears from Forecast and Between pays (anything you already posted in the Ledger stays). Deleting a single entry in the Ledger, by contrast, only removes that one entry — it never touches the series here.</p>
+        <p class="panel-intro">Rent, subscriptions, paycheques — set them up once, then post each one to the ledger with a single tap when it comes due. Use the <strong>account dropdown next to each item</strong> to change where its money comes out of (or goes into) — Forecast and Between pays follow the account you pick. A <strong>Transfer</strong> item moves money between two of your accounts: that's how you schedule a credit-card payment — e.g. Tangerine → Visa — so posting it takes the money out of Tangerine <em>and</em> pays the same amount off the card. <strong>Skip next</strong> misses just the one occurrence shown — nothing is posted to the ledger, and the series carries on from the date after. <strong>Delete series</strong> is the one that removes them all: every future occurrence goes, and the item disappears from Forecast and Between pays (anything you already posted in the Ledger stays). Deleting a single entry in the Ledger, by contrast, only removes that one entry — it never touches the series here.</p>
         <div class="card">
           <div class="form-msg" id="rec-action-msg" role="status" style="margin:0 0 6px"></div>
           <div id="rec-list"></div>
@@ -799,20 +818,23 @@
           <form id="form-recurring">
             <div class="row-3">
               <label class="field">Description
-                <input name="payee" maxlength="80" required placeholder="e.g. Rent, Netflix, Paycheque" />
+                <input name="payee" maxlength="80" required placeholder="e.g. Rent, Netflix, Paycheque, Visa payment" />
               </label>
               <label class="field">Type
-                <select name="kind"><option value="expense">Expense</option><option value="income">Income</option></select>
+                <select name="kind" id="rec-kind"><option value="expense">Expense</option><option value="income">Income</option><option value="transfer">Transfer — e.g. credit card payment</option></select>
               </label>
               <label class="field">Amount ($)
                 <input name="amount" type="number" step="0.01" min="0.01" required placeholder="0.00" />
               </label>
             </div>
             <div class="row-3">
-              <label class="field">Account
+              <label class="field" id="rec-field-account">Account — money comes out of / goes into
                 <select name="account" id="rec-account"></select>
               </label>
-              <label class="field">Category
+              <label class="field" id="rec-field-to" style="display:none">To account — money goes into (e.g. the credit card)
+                <select name="toAccount" id="rec-to"></select>
+              </label>
+              <label class="field" id="rec-field-category">Category
                 <select name="category" id="rec-category"></select>
               </label>
               <label class="field">Frequency
@@ -907,7 +929,7 @@
 
         <div class="card">
           <h2 style="font-size:1.1rem">Between pays — what's due before your next payday</h2>
-          <p class="fineprint" style="margin:2px 0 14px">Pick which recurring income is your pay. For each payday-to-payday stretch below you can now follow the money in plain steps: <strong>what's in the account when the period starts → what you'll have once the pay lands → what the bills in between add up to → what's left in the account after those bills are paid</strong>. Every bill also shows the balance left right after it comes out, so you can see the account draining bill by bill — not just the final number.</p>
+          <p class="fineprint" style="margin:2px 0 14px">Pick which recurring income is your pay. For each payday-to-payday stretch below you can now follow the money in plain steps: <strong>what's in the account when the period starts → what you'll have once the pay lands → what the bills in between add up to → what's left in the account after those bills are paid</strong>. Every bill also shows the balance left right after it comes out, so you can see the account draining bill by bill — not just the final number. Only bills set to come out of the pay account count here — change a bill's account in the Recurring tab and it moves in or out of this walk automatically. A recurring transfer out of the pay account (like a credit-card payment) counts as a bill here too.</p>
           <div class="fc-controls">
             <label class="field">My pay is
               <select id="fc-pay-source"></select>
@@ -1225,7 +1247,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
       try { localStorage.setItem("__pft_test__", "1"); localStorage.removeItem("__pft_test__"); } catch (e) { storageOk = false; }
       function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
       function blankState() {
-        return { accounts: [], transactions: [], budgets: {}, recurring: [], categories: DEFAULT_CATEGORIES.slice() };
+        return { accounts: [], transactions: [], budgets: {}, budgetAccounts: {}, recurring: [], categories: DEFAULT_CATEGORIES.slice() };
       }
       function stateFrom(obj) {
         var st = blankState();
@@ -1233,9 +1255,22 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         if (Array.isArray(obj.accounts)) st.accounts = obj.accounts;
         if (Array.isArray(obj.transactions)) st.transactions = obj.transactions;
         if (obj.budgets && typeof obj.budgets === "object") st.budgets = obj.budgets;
+        if (obj.budgetAccounts && typeof obj.budgetAccounts === "object") st.budgetAccounts = obj.budgetAccounts;
         if (Array.isArray(obj.recurring)) st.recurring = obj.recurring;
         if (Array.isArray(obj.categories) && obj.categories.length) st.categories = obj.categories;
         return st;
+      }
+      /* Which account a budget's spending comes out of ("" = not set).
+         Older data has no budgetAccounts, so this just returns "". */
+      function budgetAccount(cat) {
+        return (state.budgetAccounts && state.budgetAccounts[cat]) || "";
+      }
+      function acctOptionsHtml(selectedId, includeBlank, blankLabel) {
+        var html = includeBlank ? '<option value="">' + esc(blankLabel || "First account") + '</option>' : "";
+        html += state.accounts.map(function (a) {
+          return '<option value="' + a.id + '"' + (a.id === selectedId ? " selected" : "") + '>' + esc(a.name) + '</option>';
+        }).join("");
+        return html;
       }
       function loadSavedState(id) {
         try { var raw = lsGet(LS_DATA_PREFIX + id); return raw ? stateFrom(JSON.parse(raw)) : null; } catch (e) { return null; }
@@ -1621,14 +1656,46 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         list.innerHTML = state.accounts.map(function (a) {
           var b = accountBalance(a.id);
           var count = state.transactions.filter(function (t) { return t.accountId === a.id || t.toAccountId === a.id; }).length;
+          var isCard = String(a.type || "").toLowerCase() === "credit card";
+          var others = state.accounts.filter(function (x) { return x.id !== a.id; });
+          var payHtml = "";
+          if (isCard && others.length) {
+            payHtml = '<div class="cc-pay"><div><label>Pay this card from' +
+              '<select data-cc-from="' + a.id + '" aria-label="Account to pay ' + esc(a.name) + ' from">' +
+              others.map(function (o) { return '<option value="' + o.id + '">' + esc(o.name) + '</option>'; }).join("") +
+              '</select></label></div>' +
+              '<div><label>Amount ($)<input type="number" step="0.01" min="0.01" placeholder="0.00" data-cc-amt="' + a.id + '" aria-label="Payment amount for ' + esc(a.name) + '" /></label></div>' +
+              '<button class="btn small" type="button" data-cc-pay="' + a.id + '">Pay this card</button></div>' +
+              '<div class="meta">Paying takes the money out of the account you pick and pays the same amount off this card — one entry, both balances update.</div>';
+          }
           return '<div class="acct">' +
-            '<div class="kind">' + esc(a.type) + '</div>' +
+            '<div class="kind">' + esc(a.type) + (isCard && b < 0 ? ' · ' + esc(money(-b)) + ' owing' : '') + '</div>' +
             '<div class="name">' + esc(a.name) + '</div>' +
             '<div class="bal' + (b < 0 ? " neg" : "") + '">' + money(b) + '</div>' +
             '<div class="meta">Opening ' + money(a.opening) + ' · ' + count + ' transaction' + (count === 1 ? "" : "s") + '</div>' +
+            payHtml +
             '<div class="actions"><button class="btn ghost small" data-del-acct="' + a.id + '" type="button">Delete</button></div>' +
             '</div>';
         }).join("");
+        list.querySelectorAll("[data-cc-pay]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var cardId = btn.getAttribute("data-cc-pay");
+            var card = accountById(cardId);
+            var fromSel = list.querySelector('[data-cc-from="' + cardId + '"]');
+            var amtInp = list.querySelector('[data-cc-amt="' + cardId + '"]');
+            var fromId = fromSel ? fromSel.value : "";
+            var amount = amtInp ? Number(amtInp.value) : 0;
+            if (!card || !fromId || !(amount > 0)) { setMsg("msg-account", "Pick the account to pay from and enter an amount above zero.", false); return; }
+            var from = accountById(fromId);
+            state.transactions.push({
+              id: uid(), date: todayStr(), kind: "transfer", amount: amount,
+              accountId: fromId, toAccountId: cardId, category: "",
+              payee: "Credit card payment — " + card.name, cleared: false
+            });
+            setMsg("msg-account", "Paid " + money(amount) + " toward “" + card.name + "” from " + (from ? from.name : "account") + " — " + (from ? from.name : "that account") + " went down by " + money(amount) + " and the amount owing on the card dropped by the same " + money(amount) + ". See it in the Ledger as a Transfer.", true);
+            render();
+          });
+        });
         list.querySelectorAll("[data-del-acct]").forEach(function (btn) {
           btn.addEventListener("click", function () {
             var id = btn.getAttribute("data-del-acct");
@@ -1636,7 +1703,8 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
             var used = state.transactions.some(function (t) { return t.accountId === id || t.toAccountId === id; });
             if (used) { setMsg("msg-account", "“" + acct.name + "” has transactions in the ledger — delete those first, or keep the account.", false); switchTab("accounts"); return; }
             state.accounts = state.accounts.filter(function (a) { return a.id !== id; });
-            state.recurring = state.recurring.filter(function (r) { return r.accountId !== id; });
+            state.recurring = state.recurring.filter(function (r) { return r.accountId !== id && r.toAccountId !== id; });
+            if (state.budgetAccounts) { Object.keys(state.budgetAccounts).forEach(function (c) { if (state.budgetAccounts[c] === id) delete state.budgetAccounts[c]; }); }
             render();
           });
         });
@@ -1706,7 +1774,12 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         var mk = monthKey(todayStr());
         var spent = {};
         state.transactions.forEach(function (t) {
-          if (t.kind === "expense" && monthKey(t.date) === mk) spent[t.category] = (spent[t.category] || 0) + t.amount;
+          if (t.kind !== "expense" || monthKey(t.date) !== mk) return;
+          /* Once a budget is set to come out of a specific account, only
+             spending from that account counts against it. */
+          var ba = budgetAccount(t.category);
+          if (ba && t.accountId !== ba) return;
+          spent[t.category] = (spent[t.category] || 0) + t.amount;
         });
         var cats = Object.keys(state.budgets).sort();
         $("budget-empty").style.display = cats.length ? "none" : "block";
@@ -1718,15 +1791,33 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
           var note = used > limit
             ? '<div class="budget-note over">Over by ' + money(used - limit) + ' this month</div>'
             : '<div class="budget-note">' + money(limit - used) + ' left in ' + monthLabel(mk) + '</div>';
+          var selId = budgetAccount(cat);
+          if (selId && !accountById(selId)) selId = "";
+          if (!selId && state.accounts.length) selId = state.accounts[0].id;
+          var acctRow = state.accounts.length
+            ? '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px"><span class="from-label">Comes out of</span>' +
+              '<select class="acct-select" data-budget-acct="' + esc(cat) + '" aria-label="Account the ' + esc(cat) + ' budget comes out of">' +
+              acctOptionsHtml(selId, false) + '</select>' +
+              '<span class="from-label">— Forecast takes this budget out of this account</span></div>'
+            : '<div class="budget-note">Add an account to choose where this budget comes out of.</div>';
           return '<div class="budget-row"><div class="budget-head">' +
             '<span class="cat">' + esc(cat) + '</span>' +
             '<span class="nums">' + money(used) + ' of ' + money(limit) + '</span>' +
             '<button type="button" class="icon-btn" data-del-budget="' + esc(cat) + '" aria-label="Remove budget for ' + esc(cat) + '">Remove</button>' +
-            '</div><div class="bar"><div class="' + cls + '" style="width:' + pct + '%"></div></div>' + note + '</div>';
+            '</div><div class="bar"><div class="' + cls + '" style="width:' + pct + '%"></div></div>' + note + acctRow + '</div>';
         }).join("");
         $("budget-list").querySelectorAll("[data-del-budget]").forEach(function (btn) {
           btn.addEventListener("click", function () {
-            delete state.budgets[btn.getAttribute("data-del-budget")];
+            var c = btn.getAttribute("data-del-budget");
+            delete state.budgets[c];
+            if (state.budgetAccounts) delete state.budgetAccounts[c];
+            render();
+          });
+        });
+        $("budget-list").querySelectorAll("[data-budget-acct]").forEach(function (sel) {
+          sel.addEventListener("change", function () {
+            if (!state.budgetAccounts || typeof state.budgetAccounts !== "object") state.budgetAccounts = {};
+            state.budgetAccounts[sel.getAttribute("data-budget-acct")] = sel.value;
             render();
           });
         });
@@ -1825,6 +1916,8 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         var items = state.recurring.slice().sort(function (a, b) { return a.nextDate < b.nextDate ? -1 : 1; });
         $("rec-list").innerHTML = items.map(function (r) {
           var acct = accountById(r.accountId);
+          var toAcct = r.toAccountId ? accountById(r.toAccountId) : null;
+          var isTransfer = r.kind === "transfer";
           var due = r.nextDate <= today;
           var skipped = recSkipped(r);
           var lastSkipped = skipped.length ? skipped[skipped.length - 1] : null;
@@ -1832,14 +1925,24 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
              immediately before the current nextDate — once anything else has
              been posted or skipped, the button simply doesn't appear. */
           var canUndoSkip = !!lastSkipped && prevDate(r.nextDate, r.freq) === lastSkipped;
+          var fromSel = '<select class="acct-select" data-rec-acct="' + r.id + '" aria-label="Account ' + esc(r.payee) + ' comes out of">' + acctOptionsHtml(r.accountId, false) + '</select>';
+          var acctControls;
+          if (isTransfer) {
+            var toSel = '<select class="acct-select" data-rec-to="' + r.id + '" aria-label="Account ' + esc(r.payee) + ' goes into">' + acctOptionsHtml(r.toAccountId || "", false) + '</select>';
+            acctControls = '<div style="display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin-top:6px"><span class="from-label">From</span>' + fromSel + '<span class="from-label">→ into</span>' + toSel + '</div>';
+          } else {
+            acctControls = '<div style="display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin-top:6px"><span class="from-label">' + (r.kind === "income" ? "Goes into" : "Comes out of") + '</span>' + fromSel + '</div>';
+          }
+          var amtSign = isTransfer ? "⇄" : (r.kind === "income" ? "+" : "−");
           return '<div class="rec-row"><div class="rec-main">' +
-            '<div class="desc">' + esc(r.payee) + ' <span class="tag">' + esc(r.category) + '</span></div>' +
-            '<div class="meta">' + esc(r.freq) + ' · ' + (acct ? esc(acct.name) : "(deleted account)") + ' · next ' + prettyDate(r.nextDate) +
+            '<div class="desc">' + esc(r.payee) + (isTransfer ? ' <span class="tag">Transfer' + (toAcct ? ' → ' + esc(toAcct.name) : '') + '</span>' : ' <span class="tag">' + esc(r.category) + '</span>') + '</div>' +
+            '<div class="meta">' + esc(r.freq) + ' · ' + (isTransfer ? ((acct ? esc(acct.name) : "(deleted account)") + ' → ' + (toAcct ? esc(toAcct.name) : "(pick an account)")) : (acct ? esc(acct.name) : "(deleted account)")) + ' · next ' + prettyDate(r.nextDate) +
             (skipped.length ? ' · ' + skipped.length + ' skipped' : '') + '</div>' +
             (lastSkipped ? '<div class="meta">Last skipped: ' + prettyDate(lastSkipped) + '</div>' : '') +
+            acctControls +
             '</div>' +
             '<span class="due' + (due ? "" : " future") + '">' + (due ? "Due" : "Upcoming") + '</span>' +
-            '<span class="v" style="font-family:\'IBM Plex Mono\',monospace;font-weight:600">' + (r.kind === "income" ? "+" : "−") + money(r.amount).replace("-", "") + '</span>' +
+            '<span class="v" style="font-family:\'IBM Plex Mono\',monospace;font-weight:600">' + amtSign + money(r.amount).replace("-", "") + '</span>' +
             '<span class="rec-actions">' +
             '<button type="button" class="btn small" data-post-rec="' + r.id + '">Post</button>' +
             '<button type="button" class="btn ghost small" data-skip-rec="' + r.id + '" aria-label="Skip the ' + esc(prettyDate(r.nextDate)) + ' occurrence of ' + esc(r.payee) + ' only — the series continues" title="Miss just the ' + esc(prettyDate(r.nextDate)) + ' occurrence — nothing is posted, and the series continues after it">Skip next</button>' +
@@ -1847,11 +1950,46 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
             '<button type="button" class="icon-btn" data-del-rec="' + r.id + '" aria-label="Delete the whole ' + esc(r.payee) + ' series — removes every future occurrence">Delete series</button></span>' +
             '</div>';
         }).join("");
+        $("rec-list").querySelectorAll("[data-rec-acct]").forEach(function (sel) {
+          sel.addEventListener("change", function () {
+            var r = state.recurring.filter(function (x) { return x.id === sel.getAttribute("data-rec-acct"); })[0];
+            if (!r) return;
+            if (r.kind === "transfer" && sel.value === r.toAccountId) { recActionMsg = "A transfer needs two different accounts — pick a different account for “" + r.payee + "” to come out of."; render(); return; }
+            r.accountId = sel.value;
+            var a = accountById(sel.value);
+            recActionMsg = "“" + r.payee + "” now " + (r.kind === "income" ? "goes into " : "comes out of ") + (a ? a.name : "that account") + " — Forecast and Between pays updated.";
+            render();
+          });
+        });
+        $("rec-list").querySelectorAll("[data-rec-to]").forEach(function (sel) {
+          sel.addEventListener("change", function () {
+            var r = state.recurring.filter(function (x) { return x.id === sel.getAttribute("data-rec-to"); })[0];
+            if (!r) return;
+            if (sel.value === r.accountId) { recActionMsg = "A transfer needs two different accounts — pick a different account for “" + r.payee + "” to go into."; render(); return; }
+            r.toAccountId = sel.value;
+            var a = accountById(sel.value);
+            recActionMsg = "“" + r.payee + "” now goes into " + (a ? a.name : "that account") + " — Forecast and Between pays updated.";
+            render();
+          });
+        });
         $("rec-list").querySelectorAll("[data-post-rec]").forEach(function (btn) {
           btn.addEventListener("click", function () {
             var r = state.recurring.filter(function (x) { return x.id === btn.getAttribute("data-post-rec"); })[0];
             if (!r) return;
             var postedDate = r.nextDate;
+            if (r.kind === "transfer") {
+              if (!r.toAccountId || r.toAccountId === r.accountId) { recActionMsg = "“" + r.payee + "” is a transfer but its two accounts aren't set — use the From / into dropdowns above to pick two different accounts first."; render(); return; }
+              state.transactions.push({
+                id: uid(), date: postedDate, kind: "transfer", amount: r.amount,
+                accountId: r.accountId, toAccountId: r.toAccountId, category: "",
+                payee: r.payee, cleared: false
+              });
+              r.nextDate = nextUnskipped(r, advanceDate(r.nextDate, r.freq));
+              var fA = accountById(r.accountId), tA = accountById(r.toAccountId);
+              recActionMsg = "Posted “" + r.payee + "” for " + prettyDate(postedDate) + " — " + money(r.amount) + " moved from " + (fA ? fA.name : "account") + " into " + (tA ? tA.name : "account") + ", so both balances updated. Next one is " + prettyDate(r.nextDate) + ".";
+              render();
+              return;
+            }
             state.transactions.push({
               id: uid(), date: postedDate, kind: r.kind, amount: r.amount,
               accountId: r.accountId, toAccountId: null, category: r.category,
@@ -2167,6 +2305,17 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
           }
         });
         state.recurring.forEach(function (r) {
+          if (r.kind === "transfer") {
+            if (!accountId) return; /* cancels out in the all-accounts total */
+            var tDelta = 0;
+            if (r.accountId === accountId) tDelta -= r.amount;
+            if (r.toAccountId === accountId) tDelta += r.amount;
+            if (tDelta === 0) return;
+            occurrencesBetween(r, start, end).forEach(function (d) {
+              events.push({ date: d, label: r.payee, category: "Transfer", source: "Recurring", amount: tDelta });
+            });
+            return;
+          }
           if (accountId && r.accountId !== accountId) return;
           occurrencesBetween(r, start, end).forEach(function (d) {
             events.push({
@@ -2237,7 +2386,14 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         return total;
       }
       function buildBudgetForecast(range, accountId) {
-        var cats = Object.keys(state.budgets).filter(function (c) { return (Number(state.budgets[c]) || 0) > 0; }).sort();
+        var cats = Object.keys(state.budgets).filter(function (c) {
+          if (!((Number(state.budgets[c]) || 0) > 0)) return false;
+          /* When the forecast is filtered to one account, a budget set to
+             come out of a different account doesn't belong in it. */
+          var ba = budgetAccount(c);
+          if (accountId && ba && ba !== accountId) return false;
+          return true;
+        }).sort();
         var out = { has: cats.length > 0, cats: cats, rows: [], events: [], totalLimit: 0, totalCounted: 0, totalRemaining: 0, months: [] };
         if (!out.has) return out;
         /* Every calendar month the window touches */
@@ -2257,10 +2413,14 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
           var postDate = mEnd <= range.end ? mEnd : range.end;
           cats.forEach(function (cat) {
             var limit = Number(state.budgets[cat]) || 0;
-            var counted = categoryCountedIn(cat, mStart, postDate, accountId);
+            /* Count only spending from the account this budget comes out
+               of (falling back to the forecast's account filter). */
+            var effAcct = budgetAccount(cat) || accountId || null;
+            var counted = categoryCountedIn(cat, mStart, postDate, effAcct);
             var remaining = Math.max(0, limit - counted);
             remaining = Math.round(remaining * 100) / 100;
-            out.rows.push({ month: month, category: cat, limit: limit, counted: counted, remaining: remaining, postDate: postDate });
+            var effAcctObj = effAcct ? accountById(effAcct) : null;
+            out.rows.push({ month: month, category: cat, limit: limit, counted: counted, remaining: remaining, postDate: postDate, accountName: effAcctObj ? effAcctObj.name : "All accounts" });
             out.totalLimit += limit;
             out.totalCounted += counted;
             out.totalRemaining += remaining;
@@ -2475,7 +2635,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
               var over = row.counted > row.limit;
               return '<tr>' +
                 '<td>' + esc(prettyDate(row.postDate)) + '<br><span style="color:var(--ink-faint);font-size:.82rem">' + esc(monthLabel(row.month)) + ' month-end</span></td>' +
-                '<td><span class="tag">' + esc(row.category) + '</span></td>' +
+                '<td><span class="tag">' + esc(row.category) + '</span><br><span style="color:var(--ink-faint);font-size:.82rem">from ' + esc(row.accountName || "All accounts") + '</span></td>' +
                 '<td class="amt">' + esc(money(row.limit)) + '</td>' +
                 '<td class="amt">' + esc(money(row.counted)) + (over ? '<br><span style="color:var(--neg);font-size:.8rem;font-family:\'Public Sans\',sans-serif">over budget — $0 extra</span>' : '') + '</td>' +
                 '<td class="amt neg">' + (row.remaining > 0 ? "−" + esc(money(row.remaining).replace("-", "")) : esc(money(0))) + '</td>' +
@@ -2483,7 +2643,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
                 '</tr>';
             }).join("");
             fbDetail.innerHTML = '<h3>Budget deductions</h3>' +
-              '<table class="ledger" aria-label="Budget deductions applied in the max-budget forecast"><thead><tr><th>Posted</th><th>Category</th><th class="amt">Monthly budget</th><th class="amt">Already counted that month</th><th class="amt">Extra taken out</th><th class="amt">Balance if maxing</th></tr></thead><tbody>' + detailRows + '</tbody></table>';
+              '<table class="ledger" aria-label="Budget deductions applied in the max-budget forecast"><thead><tr><th>Posted</th><th>Category · account</th><th class="amt">Monthly budget</th><th class="amt">Already counted that month</th><th class="amt">Extra taken out</th><th class="amt">Balance if maxing</th></tr></thead><tbody>' + detailRows + '</tbody></table>';
           }
         }
         renderPayPeriods();
@@ -2730,6 +2890,21 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
           var exps = [], otherInc = 0;
           state.recurring.forEach(function (r) {
             if (r.id === pay.id) return;
+            /* Only money tied to the pay account belongs in this walk:
+               a bill set to come out of a different account doesn't
+               drain this one, and a transfer counts only on the side
+               that touches the pay account. */
+            if (r.kind === "transfer") {
+              var outOfPay = r.accountId === pay.accountId;
+              var intoPay = r.toAccountId === pay.accountId;
+              if (!outOfPay && !intoPay) return;
+              occurrencesBetween(r, pStart, lastDay).forEach(function (d) {
+                if (outOfPay) exps.push({ date: d, payee: r.payee + " → " + ((accountById(r.toAccountId) || {}).name || "account"), category: "Transfer", amount: r.amount });
+                else otherInc += r.amount;
+              });
+              return;
+            }
+            if (r.accountId !== pay.accountId) return;
             occurrencesBetween(r, pStart, lastDay).forEach(function (d) {
               if (r.kind === "expense") exps.push({ date: d, payee: r.payee, category: r.category || "—", amount: r.amount });
               else otherInc += r.amount;
@@ -2880,6 +3055,19 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
           var exps = [], otherIncItems = [], otherInc = 0;
           state.recurring.forEach(function (r) {
             if (r.id === pay.id) return;
+            /* Same account rule as Between pays: only money tied to the
+               pay account counts toward this period's walk. */
+            if (r.kind === "transfer") {
+              var outOfPayL = r.accountId === pay.accountId;
+              var intoPayL = r.toAccountId === pay.accountId;
+              if (!outOfPayL && !intoPayL) return;
+              lookupOccurrences(r, pStart, lastDay).forEach(function (d) {
+                if (outOfPayL) exps.push({ date: d, payee: r.payee + " → " + ((accountById(r.toAccountId) || {}).name || "account"), category: "Transfer", amount: r.amount });
+                else { otherInc += r.amount; otherIncItems.push({ date: d, payee: r.payee, category: "Transfer", amount: r.amount }); }
+              });
+              return;
+            }
+            if (r.accountId !== pay.accountId) return;
             lookupOccurrences(r, pStart, lastDay).forEach(function (d) {
               if (r.kind === "expense") exps.push({ date: d, payee: r.payee, category: r.category || "—", amount: r.amount });
               else { otherInc += r.amount; otherIncItems.push({ date: d, payee: r.payee, category: r.category || "—", amount: r.amount }); }
@@ -2983,8 +3171,9 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         var acctOpts = state.accounts.map(function (a) {
           return '<option value="' + a.id + '">' + esc(a.name) + '</option>';
         }).join("");
-        ["txn-account", "txn-to", "rec-account"].forEach(function (id) {
+        ["txn-account", "txn-to", "rec-account", "rec-to", "budget-account"].forEach(function (id) {
           var el = $(id);
+          if (!el) return;
           var cur = el.value;
           el.innerHTML = acctOpts || '<option value="">(add an account first)</option>';
           if (cur && accountById(cur)) el.value = cur;
@@ -3067,8 +3256,12 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         var limit = Number(fd.get("limit"));
         if (!cat || !(limit > 0)) { setMsg("msg-budget", "Pick a category and enter a limit above zero.", false); return; }
         state.budgets[cat] = limit;
+        if (!state.budgetAccounts || typeof state.budgetAccounts !== "object") state.budgetAccounts = {};
+        var bAcct = String(fd.get("account") || "");
+        if (bAcct) state.budgetAccounts[cat] = bAcct;
         e.target.reset();
-        setMsg("msg-budget", "Budget for “" + cat + "” set to " + money(limit) + " / month.", true);
+        var bAcctObj = bAcct ? accountById(bAcct) : null;
+        setMsg("msg-budget", "Budget for “" + cat + "” set to " + money(limit) + " / month" + (bAcctObj ? ", coming out of " + bAcctObj.name + "." : "."), true);
         render();
       });
       $("form-category").addEventListener("submit", function (e) {
@@ -3084,22 +3277,40 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         setMsg("msg-category", "Category “" + name + "” added.", true);
         render();
       });
+      function syncRecKindFields() {
+        var isTransfer = $("rec-kind") && $("rec-kind").value === "transfer";
+        var toWrap = $("rec-field-to"), catWrap = $("rec-field-category"), acctLabel = $("rec-field-account");
+        if (toWrap) toWrap.style.display = isTransfer ? "block" : "none";
+        if (catWrap) catWrap.style.display = isTransfer ? "none" : "block";
+        if (acctLabel && acctLabel.firstChild) acctLabel.firstChild.textContent = isTransfer ? "From account — money comes out of " : "Account — money comes out of / goes into ";
+      }
+      if ($("rec-kind")) $("rec-kind").addEventListener("change", syncRecKindFields);
       $("form-recurring").addEventListener("submit", function (e) {
         e.preventDefault();
         if (!state.accounts.length) { setMsg("msg-recurring", "Add an account first.", false); return; }
         var fd = new FormData(e.target);
         var amount = Number(fd.get("amount"));
+        var kind = String(fd.get("kind"));
         var accountId = String(fd.get("account") || "");
         if (!accountId || !(amount > 0)) { setMsg("msg-recurring", "Pick an account and enter an amount above zero.", false); return; }
+        var toAccountId = null;
+        var category = String(fd.get("category") || "");
+        if (kind === "transfer") {
+          toAccountId = String(fd.get("toAccount") || "");
+          if (!toAccountId || toAccountId === accountId) { setMsg("msg-recurring", "A transfer — like a credit card payment — needs two different accounts: where it comes out of, and where it goes into.", false); return; }
+          category = "";
+        }
         state.recurring.push({
-          id: uid(), payee: String(fd.get("payee") || "").trim(), kind: String(fd.get("kind")),
-          amount: amount, accountId: accountId, category: String(fd.get("category") || ""),
+          id: uid(), payee: String(fd.get("payee") || "").trim(), kind: kind,
+          amount: amount, accountId: accountId, toAccountId: toAccountId, category: category,
           freq: String(fd.get("freq")), nextDate: String(fd.get("nextDate")) || todayStr(),
           skippedDates: []
         });
         e.target.reset();
         e.target.querySelector('[name="nextDate"]').value = todayStr();
-        setMsg("msg-recurring", "Recurring transaction added.", true);
+        syncSelects();
+        syncRecKindFields();
+        setMsg("msg-recurring", kind === "transfer" ? "Recurring transfer added — posting it will move the money between the two accounts." : "Recurring transaction added.", true);
         render();
       });
       ["flt-search", "flt-account", "flt-month"].forEach(function (id) {
@@ -3227,6 +3438,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
             state.accounts = data.accounts;
             state.transactions = data.transactions;
             state.budgets = (data.budgets && typeof data.budgets === "object") ? data.budgets : {};
+            state.budgetAccounts = (data.budgetAccounts && typeof data.budgetAccounts === "object") ? data.budgetAccounts : {};
             state.recurring = Array.isArray(data.recurring) ? data.recurring : [];
             state.categories = (Array.isArray(data.categories) && data.categories.length) ? data.categories : DEFAULT_CATEGORIES.slice();
             setMsg("msg-backup", "Backup imported — " + state.accounts.length + " accounts, " + state.transactions.length + " transactions.", true);
@@ -3446,6 +3658,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
       /* ---------- Init ---------- */
       document.querySelector('#form-txn [name="date"]').value = todayStr();
       document.querySelector('#form-recurring [name="nextDate"]').value = todayStr();
+      syncRecKindFields();
       $("fc-start").value = todayStr();
       if ($("fc-lookup-date")) $("fc-lookup-date").value = todayStr();
       $("fc-end").value = addDaysStr(todayStr(), 90);
