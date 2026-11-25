@@ -838,11 +838,11 @@
       <!-- ============ FORECAST ============ -->
       <section class="panel" id="panel-forecast" role="tabpanel">
         <h2>Forecast &amp; pay periods</h2>
-        <p class="panel-intro">Project your balance over any timeframe you pick, using your current balances plus your recurring income and bills — and see exactly which expenses land between one payday and the next. Your monthly budgets are in here too: the forecast shows both your balance at your current spending, and the lower balance you'd land on if you maxed every budget.</p>
+        <p class="panel-intro">Project your balance over any timeframe you pick, using your current balances plus your recurring income and bills — and see exactly which expenses land between one payday and the next.</p>
 
         <div class="card">
           <h2 style="font-size:1.1rem">Balance projection</h2>
-          <p class="fineprint" style="margin:2px 0 14px">Pick a timeframe and the balance is projected day by day: every recurring transaction that falls inside it is applied on its due date, along with any ledger entries already dated inside it. Budgets don't have a due date, so they aren't posted on a day — instead, at each <strong>month-end</strong> inside the timeframe, whatever is left of that month's budget (the limit minus what's already counted for that category that month) is taken out in one lump for the “if maxing budget” line. Spending you've already logged counts toward the budget first, so a category is never double-counted.</p>
+          <p class="fineprint" style="margin:2px 0 14px">Pick a timeframe and the balance is projected day by day: every recurring transaction that falls inside it is applied on its due date, along with any ledger entries already dated inside it.</p>
           <div class="fc-controls">
             <label class="field">Timeframe
               <select id="fc-range">
@@ -869,10 +869,10 @@
             <div class="stat"><div class="label">Net change</div><div class="value" id="fc-net">$0.00</div></div>
             <div class="stat"><div class="label">Income in period</div><div class="value pos" id="fc-inc">$0.00</div></div>
             <div class="stat"><div class="label">Expenses in period</div><div class="value neg" id="fc-exp">$0.00</div></div>
+            <div class="stat"><div class="label">Projected balance — maxed out budget</div><div class="value" id="fc-max-bal">—</div></div>
           </div>
-          <div id="fc-budget-summary" aria-live="polite"></div>
           <p class="fc-note" id="fc-lowest"></p>
-          <p class="fc-note"><strong>Reading the graph:</strong> move your cursor (or finger) along the line — it will show you the <strong>date and the estimated balance in the account on that date</strong>. The solid line is your current-spending forecast; the dashed line is the same forecast if you max every budget, dropping at each month-end when the leftover budget is taken out. The balance holds steady between transactions and steps up or down on the day money moves.</p>
+          <p class="fc-note"><strong>Reading the graph:</strong> move your cursor (or finger) along the line — it will show you the <strong>date and the estimated balance in the account on that date</strong>. The balance holds steady between transactions and steps up or down on the day money moves.</p>
           <div class="fc-view-bar">
             <div class="fc-toggle" role="tablist" aria-label="Forecast view">
               <button type="button" role="tab" id="fc-view-graph" aria-selected="true">Projection graph</button>
@@ -2329,38 +2329,18 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         $("fc-net").className = "value" + (net < 0 ? " neg" : net > 0 ? " pos" : "");
         $("fc-inc").textContent = money(inc);
         $("fc-exp").textContent = money(exp);
-        /* The comparison the whole feature exists for, in one line:
-           If maxing budget = X  //  Current spending = Y */
-        var fbBox = $("fc-budget-summary");
-        if (fbBox) {
-          if (!budgetFc.has) {
-            fbBox.innerHTML = '<div class="fc-budget-box"><div class="fb-title">Budgets aren\'t in this forecast yet</div>' +
-              '<div class="fb-sub">You have no monthly budgets set. Add one in the <strong>Budgets</strong> tab (e.g. Groceries $800/month) and this forecast will also show the balance you\'d land on if you maxed it — the leftover budget is taken out at each month-end, on top of your current-spending line.</div></div>';
-          } else {
-            fbBox.innerHTML = '<div class="fc-budget-box"><div class="fb-title">If maxing budget = ' + esc(money(maxEndBal)) + ' &nbsp;//&nbsp; Current spending = ' + esc(money(endBal)) + '</div>' +
-              '<div class="fb-sub">Forecasted balance at ' + esc(prettyDate(range.end)) + ' two ways. <strong>Current spending</strong> is the projection above, from your recurring bills and dated entries. <strong>If maxing budget</strong> takes out what\'s left of every monthly budget at each month-end — ' +
-              esc(money(budgetFc.totalLimit)) + ' of budgets across ' + budgetFc.months.length + ' month' + (budgetFc.months.length === 1 ? "" : "s") + ' in this window, minus ' + esc(money(budgetFc.totalCounted)) + ' already counted for those categories in those months, so an extra <strong>' + esc(money(budgetFc.totalRemaining)) + '</strong> comes out' +
-              (accountId ? ' (counted for the selected account only)' : '') +
-              (budgetFc.totalRemaining <= 0 ? ' — nothing extra, because those categories are already at or over budget in every month shown' : '') +
-              '. Per-category detail is under the projected entries below.</div>' +
-              '<div class="fc-budget-compare">' +
-              '<div class="fb-scenario max"><div class="fb-label">If maxing budget — forecasted balance</div><div class="fb-val' + (maxEndBal < 0 ? " neg" : "") + '">' + esc(money(maxEndBal)) + '</div><div class="fb-note">Every budget spent right up to its limit</div></div>' +
-              '<div class="fb-vs" aria-hidden="true">//</div>' +
-              '<div class="fb-scenario"><div class="fb-label">Current spending — forecasted balance</div><div class="fb-val' + (endBal < 0 ? " neg" : "") + '">' + esc(money(endBal)) + '</div><div class="fb-note">Only what\'s already logged or recurring</div></div>' +
-              '</div></div>';
-          }
+        /* Maxed-out budget balance, as its own stat box under the
+           current-spending one in the stats grid above. */
+        var maxBalEl = $("fc-max-bal");
+        if (maxBalEl) {
+          maxBalEl.textContent = budgetFc.has ? money(maxEndBal) : "—";
+          maxBalEl.className = "value" + (budgetFc.has && maxEndBal < 0 ? " neg" : "");
         }
         $("fc-lowest").innerHTML = events.length
           ? "Starts at <strong>" + esc(money(startBal)) + "</strong> on " + esc(prettyDate(range.start)) +
             " · lowest point <strong>" + esc(money(lowest)) + "</strong> on " + esc(prettyDate(lowestDate)) +
-            (lowest < 0 ? " — the projection dips below zero in this window." : "") +
-            (budgetFc.has && budgetFc.totalRemaining > 0
-              ? " If you maxed every budget, the lowest point would be <strong>" + esc(money(lowestMax)) + "</strong> on " + esc(prettyDate(lowestMaxDate)) + "."
-              : "")
-          : "Starting balance in this window: <strong>" + esc(money(startBal)) + "</strong>." +
-            (budgetFc.has && budgetFc.totalRemaining > 0
-              ? " If you maxed every budget, you'd end at <strong>" + esc(money(maxEndBal)) + "</strong>."
-              : "");
+            (lowest < 0 ? " — the projection dips below zero in this window." : "")
+          : "Starting balance in this window: <strong>" + esc(money(startBal)) + "</strong>.";
 
         /* ---- Projection chart (hand-built SVG) ---- */
         var W = 640, H = 230, top = 18, base = 192, left = 6, right = 634;
@@ -2388,7 +2368,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
           dayBalMax.forEach(function (p) { ptsMax.push(X(p.date).toFixed(1) + "," + Y(p.bal).toFixed(1)); });
           ptsMax.push(X(range.end).toFixed(1) + "," + Y(maxEndBal).toFixed(1));
           parts.push('<polyline points="' + ptsMax.join(" ") + '" fill="none" stroke="var(--warn)" stroke-width="2.5" stroke-dasharray="7 5" stroke-linejoin="round" stroke-linecap="round"/>');
-          parts.push('<circle cx="' + X(range.end) + '" cy="' + Y(maxEndBal) + '" r="4" fill="var(--warn)"><title>If maxing budget ' + esc(money(maxEndBal)) + '</title></circle>');
+          parts.push('<circle cx="' + X(range.end) + '" cy="' + Y(maxEndBal) + '" r="4" fill="var(--warn)"><title>Maxed out budget ' + esc(money(maxEndBal)) + '</title></circle>');
         }
         parts.push('<polyline points="' + pts.join(" ") + '" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>');
         parts.push('<circle cx="' + X(range.start) + '" cy="' + Y(startBal) + '" r="4" fill="var(--accent)"><title>Start ' + esc(money(startBal)) + '</title></circle>');
@@ -2401,12 +2381,12 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         parts.push('<text x="' + right + '" y="12" text-anchor="end" font-size="11" fill="var(--ink-faint)">Low ' + esc(money(minV + pad)) + '</text>');
         parts.push('<text x="' + left + '" y="' + (base + 20) + '" font-size="12" fill="var(--ink-soft)">' + esc(prettyDate(range.start)) + '</text>');
         parts.push('<text x="' + right + '" y="' + (base + 20) + '" text-anchor="end" font-size="12" fill="var(--ink-soft)">' + esc(prettyDate(range.end)) + '</text>');
-        parts.push('<text x="' + (W / 2) + '" y="' + (base + 38) + '" text-anchor="middle" font-size="12" font-weight="600" fill="' + (endBal >= startBal ? "var(--pos)" : "var(--neg)") + '">Projected ' + esc(money(endBal)) + ' by ' + esc(prettyDate(range.end)) + (budgetFc.has && budgetFc.totalRemaining > 0 ? ' · If maxing budget: ' + esc(money(maxEndBal)) : '') + '</text>');
+        parts.push('<text x="' + (W / 2) + '" y="' + (base + 38) + '" text-anchor="middle" font-size="12" font-weight="600" fill="' + (endBal >= startBal ? "var(--pos)" : "var(--neg)") + '">Projected ' + esc(money(endBal)) + ' by ' + esc(prettyDate(range.end)) + '</text>');
         if (budgetFc.has && budgetFc.totalRemaining > 0) {
-          parts.push('<text x="' + left + '" y="' + (base + 55) + '" font-size="11" fill="var(--ink-soft)"><tspan fill="var(--accent)">━━</tspan> Current spending&nbsp;&nbsp;<tspan fill="var(--warn)">┅┅</tspan> If maxing budget (drops at month-end)</text>');
+          parts.push('<text x="' + left + '" y="' + (base + 55) + '" font-size="11" fill="var(--ink-soft)"><tspan fill="var(--accent)">━━</tspan> Current spending&nbsp;&nbsp;<tspan fill="var(--warn)">┅┅</tspan> Maxed out budget</text>');
         }
-        $("fc-chart").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + (budgetFc.has && budgetFc.totalRemaining > 0 ? H + 26 : H) + '" style="width:100%;height:auto;display:block" role="img" aria-label="Line chart of projected balance from ' + esc(prettyDate(range.start)) + ' to ' + esc(prettyDate(range.end)) + '. Solid line is current spending; dashed line is if you max every budget. Move along the line to read the estimated balance on any date.">' + parts.join("") + '</svg>' +
-          '<div class="chart-tip" id="fc-tip" role="status"><div class="tip-date"></div><div class="tip-amt"></div><div class="tip-sub">current spending — estimated in account</div><div class="tip-budget" style="display:none"><span>if maxing budget</span><span class="tip-budget-amt"></span></div></div>';
+        $("fc-chart").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + (budgetFc.has && budgetFc.totalRemaining > 0 ? H + 26 : H) + '" style="width:100%;height:auto;display:block" role="img" aria-label="Line chart of projected balance from ' + esc(prettyDate(range.start)) + ' to ' + esc(prettyDate(range.end)) + '. Solid line is current spending; dashed line is maxed out budget. Move along the line to read the estimated balance on any date.">' + parts.join("") + '</svg>' +
+          '<div class="chart-tip" id="fc-tip" role="status"><div class="tip-date"></div><div class="tip-amt"></div><div class="tip-sub">current spending — estimated in account</div><div class="tip-budget" style="display:none"><span>maxed out budget</span><span class="tip-budget-amt"></span></div></div>';
         /* Wire the hover: balance on any date = balance after the last
            transaction on or before that date (flat between moves). */
         (function () {
@@ -2502,10 +2482,8 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
                 '<td class="amt">' + esc(money(maxAtDate[row.postDate] != null ? maxAtDate[row.postDate] : maxEndBal)) + '</td>' +
                 '</tr>';
             }).join("");
-            fbDetail.innerHTML = '<h3>Budget deductions — if maxing budget</h3>' +
-              '<p class="fb-detail-sub">No posting day had to be invented for budgets: each one is taken out <strong>at month-end</strong> (or on the last day of this timeframe, if the timeframe ends mid-month), as a single lump equal to the limit minus what\'s already counted for that category that month — ledger spending plus recurring items in that category, from the 1st of the month up to the posting date. That\'s why the total taken out here (' + esc(money(budgetFc.totalRemaining)) + ') plus what\'s already counted (' + esc(money(budgetFc.totalCounted)) + ') brings each category up to — never past — its full budget. The last column is your balance on the max-budget (dashed) line right after that month-end deduction.</p>' +
-              '<table class="ledger" aria-label="Budget deductions applied in the max-budget forecast"><thead><tr><th>Posted</th><th>Category</th><th class="amt">Monthly budget</th><th class="amt">Already counted that month</th><th class="amt">Extra taken out</th><th class="amt">Balance if maxing</th></tr></thead><tbody>' + detailRows + '</tbody></table>' +
-              '<p class="fc-note" style="margin-top:10px"><strong>If maxing budget = ' + esc(money(maxEndBal)) + ' &nbsp;//&nbsp; Current spending = ' + esc(money(endBal)) + '</strong> at ' + esc(prettyDate(range.end)) + ' — a difference of ' + esc(money(budgetFc.totalRemaining)) + '.</p>';
+            fbDetail.innerHTML = '<h3>Budget deductions</h3>' +
+              '<table class="ledger" aria-label="Budget deductions applied in the max-budget forecast"><thead><tr><th>Posted</th><th>Category</th><th class="amt">Monthly budget</th><th class="amt">Already counted that month</th><th class="amt">Extra taken out</th><th class="amt">Balance if maxing</th></tr></thead><tbody>' + detailRows + '</tbody></table>';
           }
         }
         renderPayPeriods();
