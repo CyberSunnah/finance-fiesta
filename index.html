@@ -247,7 +247,16 @@
       .due.future { background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--line); }
       .rep-row .k { color: var(--ink-soft); }
       .rep-row .v { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-variant-numeric: tabular-nums; }
-      .chart-box { overflow-x: auto; }
+      .chart-box { overflow-x: auto; position: relative; }
+      .chart-tip {
+        position: absolute; z-index: 5; pointer-events: none; display: none;
+        background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+        box-shadow: var(--shadow); padding: 8px 11px; transform: translate(-50%, calc(-100% - 14px));
+        text-align: center; white-space: nowrap;
+      }
+      .chart-tip .tip-date { font-size: .8rem; font-weight: 700; color: var(--ink-soft); }
+      .chart-tip .tip-amt { font-family: "IBM Plex Mono", monospace; font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+      .chart-tip .tip-sub { font-size: .78rem; color: var(--ink-faint); }
       svg text { font-family: "Public Sans", sans-serif; }
 
       .cat-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
@@ -322,6 +331,30 @@
       .period-exp .pe-amt { font-family: "IBM Plex Mono", monospace; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
       .period-total { display: flex; justify-content: space-between; gap: 12px; padding-top: 8px; font-size: .94rem; color: var(--ink-soft); }
       .period-total .pe-amt { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-variant-numeric: tabular-nums; }
+      /* Between pays — plain-money flow */
+      .pay-now {
+        background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius);
+        padding: 14px 16px; margin-bottom: 16px;
+      }
+      .pay-now .pn-big { font-family: "IBM Plex Mono", monospace; font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+      .pay-now .pn-big.neg { color: var(--neg); }
+      .pay-now p { margin: 4px 0 0; color: var(--ink-soft); font-size: .93rem; }
+      .pay-now p strong { color: var(--ink); }
+      .period-flow {
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0 6px;
+      }
+      @media (max-width: 640px) { .period-flow { grid-template-columns: repeat(2, 1fr); } }
+      .period-flow .pf {
+        background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; min-width: 0;
+      }
+      .period-hero .pf { background: var(--surface); }
+      .period-flow .pf .pf-label { font-size: .74rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-faint); line-height: 1.3; }
+      .period-flow .pf .pf-val { font-family: "IBM Plex Mono", monospace; font-weight: 700; font-size: 1.02rem; font-variant-numeric: tabular-nums; margin-top: 2px; overflow-wrap: anywhere; }
+      .period-flow .pf .pf-val.neg { color: var(--neg); }
+      .period-flow .pf.final { border-color: var(--accent); background: var(--accent-soft); }
+      .period-exp .pe-bal { font-family: "IBM Plex Mono", monospace; font-size: .85rem; color: var(--ink-soft); white-space: nowrap; font-variant-numeric: tabular-nums; }
+      .period-exp .pe-bal.neg { color: var(--neg); font-weight: 700; }
+      @media (max-width: 640px) { .period-exp { flex-wrap: wrap; } .period-exp .pe-bal { width: 100%; text-align: right; } }
       /* Forecast graph / breakdown slide-over */
       .fc-view-bar { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; justify-content: space-between; margin-top: 14px; }
       .fc-toggle { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 3px; }
@@ -387,6 +420,25 @@
       .bd-item-amt { font-family: "IBM Plex Mono", monospace; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
       .bd-item-amt.pos { color: var(--pos); }
       .bd-item-amt.neg { color: var(--neg); }
+      /* Date lookup */
+      .lookup-controls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end; margin-bottom: 6px; }
+      .lookup-controls label.field { margin-bottom: 0; }
+      .lookup-controls label.field input { min-width: 170px; }
+      .lookup-hero {
+        background: var(--accent-soft); border-radius: var(--radius);
+        padding: 16px 18px; margin: 12px 0 6px;
+      }
+      .lookup-hero .l-when { font-weight: 700; font-size: 1.05rem; }
+      .lookup-hero .l-sub { color: var(--ink-soft); font-size: .93rem; margin-top: 4px; line-height: 1.5; }
+      .lookup-hero .l-sub strong { color: var(--ink); }
+      .period-exp.is-selected-date { background: var(--accent-soft); border-radius: 6px; padding-left: 8px; padding-right: 8px; }
+      .period-exp.is-after-date { opacity: .82; }
+      .pe-when-tag { font-size: .74rem; font-weight: 700; letter-spacing: .02em; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+      .pe-when-tag.before { background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-soft); }
+      .pe-when-tag.on { background: var(--accent); color: #fff; }
+      @media (prefers-color-scheme: dark) { .pe-when-tag.on { color: #0c1511; } }
+      .pe-when-tag.after { background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn); }
+      .lookup-section-title { font-weight: 700; font-size: .95rem; margin: 16px 0 4px; }
       .bd-overall { margin-top: 18px; border-top: 2px solid var(--line); padding-top: 8px; }
       .bd-overall-toggle {
         display: flex; width: 100%; background: none; border: none; align-items: center; gap: 10px;
@@ -688,6 +740,7 @@
             <div class="stat"><div class="label">Expenses in period</div><div class="value neg" id="fc-exp">$0.00</div></div>
           </div>
           <p class="fc-note" id="fc-lowest"></p>
+          <p class="fc-note"><strong>Reading the graph:</strong> move your cursor (or finger) along the line — it will show you the <strong>date and the estimated balance in the account on that date</strong>. The balance holds steady between transactions and steps up or down on the day money moves.</p>
           <div class="fc-view-bar">
             <div class="fc-toggle" role="tablist" aria-label="Forecast view">
               <button type="button" role="tab" id="fc-view-graph" aria-selected="true">Projection graph</button>
@@ -721,16 +774,33 @@
 
         <div class="card">
           <h2 style="font-size:1.1rem">Between pays — what's due before your next payday</h2>
-          <p class="fineprint" style="margin:2px 0 14px">Pick which recurring income is your pay. Each block below runs from one payday to the day before the next, and lists every recurring expense that lands in between — so you can see what's spoken for before the money even arrives.</p>
+          <p class="fineprint" style="margin:2px 0 14px">Pick which recurring income is your pay. For each payday-to-payday stretch below you can now follow the money in plain steps: <strong>what's in the account when the period starts → what you'll have once the pay lands → what the bills in between add up to → what's left in the account after those bills are paid</strong>. Every bill also shows the balance left right after it comes out, so you can see the account draining bill by bill — not just the final number.</p>
           <div class="fc-controls">
             <label class="field">My pay is
               <select id="fc-pay-source"></select>
             </label>
           </div>
+          <div id="pay-now"></div>
           <div id="pay-periods"></div>
           <div class="empty" id="pay-empty" style="display:none">
             <strong>No recurring pay found</strong>
             Add your paycheque as a recurring <em>income</em> transaction in the Recurring tab (e.g. “Paycheque”, every 2 weeks), and this view will line your bills up between paydays.
+          </div>
+        </div>
+
+        <div class="card" id="fc-lookup-card">
+          <h2 style="font-size:1.1rem">Check a date — which pay period is it in?</h2>
+          <p class="fineprint" style="margin:2px 0 14px">Pick any date and this will find the payday-to-payday stretch it falls in (using the same pay you picked in <strong>Between pays</strong> above), list every bill due in that stretch, and estimate two balances: <strong>how much you'll have on that day itself</strong> — after that day's bills come out — and <strong>how much you'll have left after the whole pay period</strong>, once every bill in it is paid. Estimates use your recurring income and bills plus your account balance, the same maths as Between pays, so the “after the period” number here matches the period above.</p>
+          <div class="lookup-controls">
+            <label class="field">Date to check
+              <input type="date" id="fc-lookup-date" />
+            </label>
+            <button class="btn ghost small" id="fc-lookup-today" type="button">Use today</button>
+          </div>
+          <div id="fc-lookup-result" aria-live="polite"></div>
+          <div class="empty" id="fc-lookup-empty" style="display:none">
+            <strong>No recurring pay found</strong>
+            Add your paycheque as a recurring <em>income</em> transaction in the Recurring tab first, then pick a date here and it will show that date's pay period.
           </div>
         </div>
       </section>
@@ -1959,12 +2029,59 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         parts.push('<polyline points="' + pts.join(" ") + '" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>');
         parts.push('<circle cx="' + X(range.start) + '" cy="' + Y(startBal) + '" r="4" fill="var(--accent)"><title>Start ' + esc(money(startBal)) + '</title></circle>');
         parts.push('<circle cx="' + X(range.end) + '" cy="' + Y(endBal) + '" r="4" fill="var(--accent)"><title>Projected ' + esc(money(endBal)) + '</title></circle>');
+        /* Hover layer: guide line + dot follow the cursor, tooltip shows date + balance */
+        parts.push('<line id="fc-hover-line" x1="0" y1="' + top + '" x2="0" y2="' + base + '" stroke="var(--ink-faint)" stroke-width="1" stroke-dasharray="3 3" style="display:none"/>');
+        parts.push('<circle id="fc-hover-dot" r="6" fill="var(--surface)" stroke="var(--accent)" stroke-width="3" style="display:none"/>');
+        parts.push('<rect id="fc-hover-zone" x="' + left + '" y="0" width="' + (right - left) + '" height="' + base + '" fill="transparent" style="cursor:crosshair"/>');
         parts.push('<text x="' + left + '" y="12" font-size="11" fill="var(--ink-faint)">High ' + esc(money(maxV - pad)) + '</text>');
         parts.push('<text x="' + right + '" y="12" text-anchor="end" font-size="11" fill="var(--ink-faint)">Low ' + esc(money(minV + pad)) + '</text>');
         parts.push('<text x="' + left + '" y="' + (base + 20) + '" font-size="12" fill="var(--ink-soft)">' + esc(prettyDate(range.start)) + '</text>');
         parts.push('<text x="' + right + '" y="' + (base + 20) + '" text-anchor="end" font-size="12" fill="var(--ink-soft)">' + esc(prettyDate(range.end)) + '</text>');
         parts.push('<text x="' + (W / 2) + '" y="' + (base + 38) + '" text-anchor="middle" font-size="12" font-weight="600" fill="' + (endBal >= startBal ? "var(--pos)" : "var(--neg)") + '">Projected ' + esc(money(endBal)) + ' by ' + esc(prettyDate(range.end)) + '</text>');
-        $("fc-chart").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="Line chart of projected balance from ' + esc(prettyDate(range.start)) + ' to ' + esc(prettyDate(range.end)) + '">' + parts.join("") + '</svg>';
+        $("fc-chart").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="Line chart of projected balance from ' + esc(prettyDate(range.start)) + ' to ' + esc(prettyDate(range.end)) + '. Move along the line to read the estimated balance on any date.">' + parts.join("") + '</svg>' +
+          '<div class="chart-tip" id="fc-tip" role="status"><div class="tip-date"></div><div class="tip-amt"></div><div class="tip-sub">estimated in account</div></div>';
+        /* Wire the hover: balance on any date = balance after the last
+           transaction on or before that date (flat between moves). */
+        (function () {
+          var box = $("fc-chart"), svg = box.querySelector("svg"), tip = $("fc-tip");
+          var zone = box.querySelector("#fc-hover-zone"), line = box.querySelector("#fc-hover-line"), dot = box.querySelector("#fc-hover-dot");
+          if (!svg || !zone || !tip) return;
+          function balOn(dstr) {
+            var b = startBal;
+            for (var i = 0; i < dayBal.length; i++) { if (dayBal[i].date <= dstr) b = dayBal[i].bal; else break; }
+            return b;
+          }
+          function show(clientX) {
+            var rect = svg.getBoundingClientRect();
+            if (!rect.width) return;
+            var svgX = (clientX - rect.left) / rect.width * W;
+            svgX = Math.max(left, Math.min(right, svgX));
+            var days = Math.round((svgX - left) / (right - left) * spanDays);
+            var dstr = addDaysStr(range.start, days);
+            if (dstr > range.end) dstr = range.end;
+            var b = balOn(dstr);
+            var px = X(dstr), py = Y(b);
+            line.setAttribute("x1", px); line.setAttribute("x2", px); line.style.display = "";
+            dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.style.display = "";
+            tip.querySelector(".tip-date").textContent = prettyDate(dstr);
+            var amtEl = tip.querySelector(".tip-amt");
+            amtEl.textContent = money(b);
+            amtEl.style.color = b < 0 ? "var(--neg)" : "var(--ink)";
+            tip.style.display = "block";
+            tip.style.left = (px / W * 100) + "%";
+            tip.style.top = (py / H * rect.height) + "px";
+            /* Keep the tooltip on the chart near the edges */
+            var frac = px / W;
+            var tx = frac < 0.16 ? "-12%" : frac > 0.84 ? "-88%" : "-50%";
+            tip.style.transform = py < 64 ? "translate(" + tx + ", 16px)" : "translate(" + tx + ", calc(-100% - 14px))";
+          }
+          function hide() { tip.style.display = "none"; line.style.display = "none"; dot.style.display = "none"; }
+          zone.addEventListener("mousemove", function (e) { show(e.clientX); });
+          zone.addEventListener("mouseleave", hide);
+          zone.addEventListener("touchstart", function (e) { if (e.touches.length) show(e.touches[0].clientX); }, { passive: true });
+          zone.addEventListener("touchmove", function (e) { if (e.touches.length) show(e.touches[0].clientX); }, { passive: true });
+          zone.addEventListener("touchend", hide);
+        })();
         renderBreakdown(events, exp, range);
         sizeFcViewport();
 
@@ -2131,13 +2248,56 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
           parts.push('<polyline points="' + pts.join(" ") + '" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>');
           parts.push('<circle cx="' + X(range.start) + '" cy="' + Y(startBal) + '" r="4" fill="var(--accent)"><title>Start ' + esc(money(startBal)) + '</title></circle>');
           parts.push('<circle cx="' + X(range.end) + '" cy="' + Y(endBal) + '" r="4" fill="var(--accent)"><title>End ' + esc(money(endBal)) + '</title></circle>');
+          parts.push('<line id="hs-hover-line" x1="0" y1="' + top + '" x2="0" y2="' + base + '" stroke="var(--ink-faint)" stroke-width="1" stroke-dasharray="3 3" style="display:none"/>');
+          parts.push('<circle id="hs-hover-dot" r="6" fill="var(--surface)" stroke="var(--accent)" stroke-width="3" style="display:none"/>');
+          parts.push('<rect id="hs-hover-zone" x="' + left + '" y="0" width="' + (right - left) + '" height="' + base + '" fill="transparent" style="cursor:crosshair"/>');
         }
         parts.push('<text x="' + left + '" y="12" font-size="11" fill="var(--ink-faint)">High ' + esc(money(maxV - pad)) + '</text>');
         parts.push('<text x="' + right + '" y="12" text-anchor="end" font-size="11" fill="var(--ink-faint)">Low ' + esc(money(minV + pad)) + '</text>');
         parts.push('<text x="' + left + '" y="' + (base + 20) + '" font-size="12" fill="var(--ink-soft)">' + esc(prettyDate(range.start)) + '</text>');
         parts.push('<text x="' + right + '" y="' + (base + 20) + '" text-anchor="end" font-size="12" fill="var(--ink-soft)">' + esc(prettyDate(range.end)) + '</text>');
         parts.push('<text x="' + (W / 2) + '" y="' + (base + 38) + '" text-anchor="middle" font-size="12" font-weight="600" fill="' + (endBal >= startBal ? "var(--pos)" : "var(--neg)") + '">Ended at ' + esc(money(endBal)) + ' on ' + esc(prettyDate(range.end)) + '</text>');
-        $("hs-chart").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="Line chart of actual balance from ' + esc(prettyDate(range.start)) + ' to ' + esc(prettyDate(range.end)) + '">' + parts.join("") + '</svg>';
+        $("hs-chart").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="Line chart of actual balance from ' + esc(prettyDate(range.start)) + ' to ' + esc(prettyDate(range.end)) + '. Move along the line to read the balance on any date.">' + parts.join("") + '</svg>' +
+          (events.length ? '<div class="chart-tip" id="hs-tip" role="status"><div class="tip-date"></div><div class="tip-amt"></div><div class="tip-sub">balance in account</div></div>' : '');
+        if (events.length) (function () {
+          var box = $("hs-chart"), svg = box.querySelector("svg"), tip = $("hs-tip");
+          var zone = box.querySelector("#hs-hover-zone"), line = box.querySelector("#hs-hover-line"), dot = box.querySelector("#hs-hover-dot");
+          if (!svg || !zone || !tip) return;
+          function balOn(dstr) {
+            var b = startBal;
+            for (var i = 0; i < dayBal.length; i++) { if (dayBal[i].date <= dstr) b = dayBal[i].bal; else break; }
+            return b;
+          }
+          function show(clientX) {
+            var rect = svg.getBoundingClientRect();
+            if (!rect.width) return;
+            var svgX = (clientX - rect.left) / rect.width * W;
+            svgX = Math.max(left, Math.min(right, svgX));
+            var days = Math.round((svgX - left) / (right - left) * spanDays);
+            var dstr = addDaysStr(range.start, days);
+            if (dstr > range.end) dstr = range.end;
+            var b = balOn(dstr);
+            var px = X(dstr), py = Y(b);
+            line.setAttribute("x1", px); line.setAttribute("x2", px); line.style.display = "";
+            dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.style.display = "";
+            tip.querySelector(".tip-date").textContent = prettyDate(dstr);
+            var amtEl = tip.querySelector(".tip-amt");
+            amtEl.textContent = money(b);
+            amtEl.style.color = b < 0 ? "var(--neg)" : "var(--ink)";
+            tip.style.display = "block";
+            tip.style.left = (px / W * 100) + "%";
+            tip.style.top = (py / H * rect.height) + "px";
+            var frac = px / W;
+            var tx = frac < 0.16 ? "-12%" : frac > 0.84 ? "-88%" : "-50%";
+            tip.style.transform = py < 64 ? "translate(" + tx + ", 16px)" : "translate(" + tx + ", calc(-100% - 14px))";
+          }
+          function hide() { tip.style.display = "none"; line.style.display = "none"; dot.style.display = "none"; }
+          zone.addEventListener("mousemove", function (e) { show(e.clientX); });
+          zone.addEventListener("mouseleave", hide);
+          zone.addEventListener("touchstart", function (e) { if (e.touches.length) show(e.touches[0].clientX); }, { passive: true });
+          zone.addEventListener("touchmove", function (e) { if (e.touches.length) show(e.touches[0].clientX); }, { passive: true });
+          zone.addEventListener("touchend", hide);
+        })();
         renderHistoryBreakdown(events, exp, range);
         renderHistoryMonths(events, range);
         sizeHsViewport();
@@ -2155,7 +2315,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         var pays = state.recurring.filter(function (r) { return r.kind === "income"; });
         if (!pays.length) {
           sel.innerHTML = '<option value="">(no recurring income yet)</option>';
-          box.innerHTML = ""; empty.style.display = "block"; return;
+          box.innerHTML = ""; var nb0 = $("pay-now"); if (nb0) nb0.innerHTML = ""; empty.style.display = "block"; renderDateLookup(); return;
         }
         empty.style.display = "none";
         if (!fcPayId || !pays.some(function (r) { return r.id === fcPayId; })) {
@@ -2168,7 +2328,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         }).join("");
         var pay = null;
         pays.forEach(function (r) { if (r.id === fcPayId) pay = r; });
-        if (!pay) { box.innerHTML = ""; return; }
+        if (!pay) { box.innerHTML = ""; renderDateLookup(); return; }
 
         /* Pay dates: walk back from nextDate to the most recent payday on
            or before today, then step forward for the periods to show. */
@@ -2192,41 +2352,244 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
           var expTotal = 0; exps.forEach(function (e) { expTotal += e.amount; });
           return { exps: exps, expTotal: expTotal, otherInc: otherInc, leftover: pay.amount + otherInc - expTotal };
         }
-        function expRows(pd) {
-          if (!pd.exps.length) return '<p class="fc-note">No recurring expenses fall in this period — the whole pay is unspoken for.</p>';
+        /* Chain the periods through the pay account's real balance:
+           period 1 starts from the account balance just before its payday
+           (ledger-based), and each later period starts where the one
+           before it ended — start + pay + other income − bills. */
+        var payAcct = accountById(pay.accountId);
+        var payAcctName = payAcct ? payAcct.name : "your account";
+        var chainStart = balanceAsOf(dates[0], pay.accountId);
+        var periods = [];
+        var runStart = chainStart;
+        for (var pi = 0; pi < dates.length - 1; pi++) {
+          var pd0 = periodData(dates[pi], dates[pi + 1]);
+          var afterPay = runStart + pay.amount + pd0.otherInc;
+          periods.push({
+            start: dates[pi], end: dates[pi + 1], data: pd0,
+            startBal: runStart, afterPay: afterPay, endBal: afterPay - pd0.expTotal
+          });
+          runStart = afterPay - pd0.expTotal;
+        }
+        /* "Right now" summary — the answer in one glance */
+        var nowBox = $("pay-now");
+        if (nowBox) {
+          var liveBal = payAcct ? accountBalance(pay.accountId) : 0;
+          var curIdx = 0;
+          periods.forEach(function (pp, idx) { if (today >= pp.start && today < pp.end) curIdx = idx; });
+          var cur = periods[curIdx];
+          var nextPayDate = periods.length > curIdx + 1 ? periods[curIdx + 1].start : cur.end;
+          nowBox.innerHTML = '<div class="pn-big' + (liveBal < 0 ? " neg" : "") + '">' + esc(money(liveBal)) + ' <span style="font-size:.85rem;font-weight:600;color:var(--ink-soft)">in ' + esc(payAcctName) + ' right now</span></div>' +
+            '<p>Your next pay of <strong>' + esc(money(pay.amount)) + '</strong> lands <strong>' + esc(prettyDate(nextPayDate)) + '</strong>. ' +
+            'In the current stretch (' + esc(prettyDate(cur.start)) + ' → ' + esc(prettyDate(addDaysStr(cur.end, -1))) + '), bills between pays add up to <strong>−' + esc(money(cur.data.expTotal).replace("-", "")) + '</strong>, ' +
+            'so after the pay lands and those bills are paid you\'d have <strong>' + esc(money(cur.endBal)) + '</strong> left in ' + esc(payAcctName) + ' before the following payday. ' +
+            'Each period below shows that same walk-through, bill by bill.</p>';
+        }
+        function flowHtml(pp) {
+          var d = pp.data;
+          return '<div class="period-flow">' +
+            '<div class="pf"><div class="pf-label">In account at start</div><div class="pf-val' + (pp.startBal < 0 ? " neg" : "") + '">' + esc(money(pp.startBal)) + '</div></div>' +
+            '<div class="pf"><div class="pf-label">After pay lands' + (d.otherInc > 0 ? " (+ other income)" : "") + '</div><div class="pf-val' + (pp.afterPay < 0 ? " neg" : "") + '">' + esc(money(pp.afterPay)) + '</div></div>' +
+            '<div class="pf"><div class="pf-label">Bills between pays (' + d.exps.length + ')</div><div class="pf-val neg">−' + esc(money(d.expTotal).replace("-", "")) + '</div></div>' +
+            '<div class="pf final"><div class="pf-label">Left after bills are paid</div><div class="pf-val' + (pp.endBal < 0 ? " neg" : "") + '">' + esc(money(pp.endBal)) + '</div></div>' +
+            '</div>';
+        }
+        function expRows(pp) {
+          var pd = pp.data;
+          if (!pd.exps.length) return '<p class="fc-note">No recurring expenses fall in this period — nothing comes out, so the account stays at ' + esc(money(pp.afterPay)) + ' until the next pay.</p>';
+          var run = pp.afterPay;
           return pd.exps.map(function (e) {
+            run -= e.amount;
             return '<div class="period-exp"><span class="pe-main">' + esc(e.payee) + ' <span class="tag">' + esc(e.category) + '</span></span>' +
               '<span class="pe-date">' + esc(prettyDate(e.date)) + '</span>' +
-              '<span class="pe-amt">−' + esc(money(e.amount).replace("-", "")) + '</span></div>';
+              '<span class="pe-amt">−' + esc(money(e.amount).replace("-", "")) + '</span>' +
+              '<span class="pe-bal' + (run < 0 ? " neg" : "") + '" title="Balance left in the account right after this bill">→ ' + esc(money(run)) + ' left</span></div>';
           }).join("") +
-          '<div class="period-total"><span>Total expenses between pays</span><span class="pe-amt">−' + esc(money(pd.expTotal).replace("-", "")) + '</span></div>' +
-          (pd.otherInc > 0 ? '<div class="period-total"><span>Other recurring income</span><span class="pe-amt">+' + esc(money(pd.otherInc).replace("-", "")) + '</span></div>' : "");
+          '<div class="period-total"><span>Total bills between pays</span><span class="pe-amt">−' + esc(money(pd.expTotal).replace("-", "")) + '</span></div>' +
+          (pd.otherInc > 0 ? '<div class="period-total"><span>Other recurring income in this period (already counted in “After pay lands”)</span><span class="pe-amt">+' + esc(money(pd.otherInc).replace("-", "")) + '</span></div>' : "") +
+          '<div class="period-total" style="font-weight:700;color:var(--ink)"><span>Left in ' + esc(payAcctName) + ' after all these bills</span><span class="pe-amt" style="color:' + (pp.endBal < 0 ? "var(--neg)" : "var(--pos)") + '">' + esc(money(pp.endBal)) + '</span></div>';
         }
 
         var html = "";
-        for (var p = 0; p < dates.length - 1; p++) {
-          var pStart = dates[p], pEnd = dates[p + 1];
-          var pd = periodData(pStart, pEnd);
-          var isCurrent = today >= pStart && today < pEnd;
-          var isNext = pStart > today && dates[p - 1] <= today || (p === 0 && pStart > today);
+        for (var p = 0; p < periods.length; p++) {
+          var pp = periods[p];
+          var isCurrent = today >= pp.start && today < pp.end;
+          var isNext = pp.start > today && dates[p] <= today || (p === 0 && pp.start > today);
           var whenLabel = (isCurrent ? "Current period · " : isNext ? "Next pay period · " : "Pay period · ") +
-            prettyDate(pStart) + " → " + prettyDate(addDaysStr(pEnd, -1));
-          if (isNext || (p === 0 && pStart > today)) {
+            prettyDate(pp.start) + " → " + prettyDate(addDaysStr(pp.end, -1));
+          if (isNext || (p === 0 && pp.start > today)) {
             html += '<div class="period-hero"><div class="p-when">' + esc(whenLabel) + '</div>' +
-              '<div class="p-sub">Pay of ' + esc(money(pay.amount)) + ' lands ' + esc(prettyDate(pStart)) + '; next pay lands ' + esc(prettyDate(pEnd)) + '. Everything below comes out in between.</div>' +
-              '<div class="p-nums"><span>Pay <b>' + esc(money(pay.amount)) + '</b></span>' +
-              '<span>Expenses <b>−' + esc(money(pd.expTotal).replace("-", "")) + '</b></span>' +
-              (pd.otherInc > 0 ? '<span>Other income <b>+' + esc(money(pd.otherInc).replace("-", "")) + '</b></span>' : "") +
-              '<span>Left over <b style="color:' + (pd.leftover < 0 ? "var(--neg)" : "var(--pos)") + '">' + esc(money(pd.leftover)) + '</b></span></div></div>' +
-              '<div style="padding:4px 2px 10px">' + expRows(pd) + '</div>';
+              '<div class="p-sub">The account starts this period with ' + esc(money(pp.startBal)) + '. Pay of ' + esc(money(pay.amount)) + ' lands ' + esc(prettyDate(pp.start)) + ', bringing it to ' + esc(money(pp.afterPay)) + '; the bills below then come out before the next pay lands ' + esc(prettyDate(pp.end)) + ', leaving ' + esc(money(pp.endBal)) + '.</div>' +
+              flowHtml(pp) + '</div>' +
+              '<div style="padding:4px 2px 10px">' + expRows(pp) + '</div>';
           } else {
             html += '<div class="period-block"><div class="period-head"><span class="p-when">' + esc(whenLabel) + '</span>' +
-              '<span class="p-left' + (pd.leftover < 0 ? " neg" : "") + '">' + esc(money(pd.leftover)) + ' left</span></div>' +
-              '<div class="fc-note" style="margin:4px 0 2px">Pay ' + esc(money(pay.amount)) + ' · expenses −' + esc(money(pd.expTotal).replace("-", "")) + ' across ' + pd.exps.length + ' bill' + (pd.exps.length === 1 ? "" : "s") + '</div>' +
-              expRows(pd) + '</div>';
+              '<span class="p-left' + (pp.endBal < 0 ? " neg" : "") + '">' + esc(money(pp.endBal)) + ' left after bills</span></div>' +
+              flowHtml(pp) +
+              expRows(pp) + '</div>';
           }
         }
         box.innerHTML = html;
+        renderDateLookup();
+      }
+      /* ---------- Date lookup: a single date → its pay period ----------
+         Uses the same pay source (fcPayId) and the same chaining maths
+         as Between pays, so the "after this pay period" figure here
+         matches the figure for that period in the list above.
+         - Period start for a date = most recent payday on or before it.
+         - Anchor = the period containing today, starting from
+           balanceAsOf(anchorStart) in the pay account (ledger-based).
+         - Walk period-by-period forward or backward from the anchor
+           to the target period, chaining end balances.
+         - "On the day itself" = period start balance + pay (lands on
+           the period start) + other income due on/before the date
+           − bills due on/before the date, within that period. */
+      function renderDateLookup() {
+        var box = $("fc-lookup-result");
+        var empty = $("fc-lookup-empty");
+        var dateEl = $("fc-lookup-date");
+        if (!box || !dateEl) return;
+        var pays = state.recurring.filter(function (r) { return r.kind === "income"; });
+        if (!pays.length) { box.innerHTML = ""; if (empty) empty.style.display = "block"; return; }
+        if (empty) empty.style.display = "none";
+        var pay = null;
+        pays.forEach(function (r) { if (r.id === fcPayId) pay = r; });
+        if (!pay) pay = pays.filter(function (r) { return (r.category || "").toLowerCase() === "paycheque"; })[0] || pays[0];
+        if (!pay) { box.innerHTML = ""; if (empty) empty.style.display = "block"; return; }
+        var target = dateEl.value || todayStr();
+        var today = todayStr();
+        var payAcct = accountById(pay.accountId);
+        var payAcctName = payAcct ? payAcct.name : "your account";
+
+        function periodStartFor(dateStr) {
+          var cursor = pay.nextDate;
+          var guard = 0;
+          while (cursor > dateStr && guard < 1000) { cursor = prevDate(cursor, pay.freq); guard++; }
+          guard = 0;
+          while (advanceDate(cursor, pay.freq) <= dateStr && guard < 1000) { cursor = advanceDate(cursor, pay.freq); guard++; }
+          return cursor;
+        }
+        function lookupOccurrences(r, start, end) {
+          /* Like occurrencesBetween, but also steps backwards from
+             nextDate — needed so a past pay period still finds the
+             bills that fell in it, even though their nextDate has
+             since moved forward to their next upcoming date. */
+          var out = [];
+          if (!r || !r.nextDate || start > end) return out;
+          var cursor = r.nextDate, guard = 0;
+          while (cursor < start && guard < 1200) { cursor = advanceDate(cursor, r.freq); guard++; }
+          guard = 0;
+          while (guard < 1200) {
+            var pv = prevDate(cursor, r.freq);
+            if (pv >= start && pv < cursor) { cursor = pv; guard++; } else break;
+          }
+          guard = 0;
+          while (cursor <= end && guard < 1200) { if (cursor >= start) out.push(cursor); cursor = advanceDate(cursor, r.freq); guard++; }
+          return out;
+        }
+        function lookupPeriodData(pStart) {
+          var pEndEx = advanceDate(pStart, pay.freq);
+          var lastDay = addDaysStr(pEndEx, -1);
+          var exps = [], otherIncItems = [], otherInc = 0;
+          state.recurring.forEach(function (r) {
+            if (r.id === pay.id) return;
+            lookupOccurrences(r, pStart, lastDay).forEach(function (d) {
+              if (r.kind === "expense") exps.push({ date: d, payee: r.payee, category: r.category || "—", amount: r.amount });
+              else { otherInc += r.amount; otherIncItems.push({ date: d, payee: r.payee, category: r.category || "—", amount: r.amount }); }
+            });
+          });
+          exps.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+          otherIncItems.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+          var expTotal = 0; exps.forEach(function (e) { expTotal += e.amount; });
+          return { exps: exps, expTotal: expTotal, otherInc: otherInc, otherIncItems: otherIncItems, endExclusive: pEndEx, lastDay: lastDay };
+        }
+
+        var pStart = periodStartFor(target);
+        var data = lookupPeriodData(pStart);
+        var pEnd = data.endExclusive;
+        var lastDay = data.lastDay;
+
+        var anchorStart = periodStartFor(today);
+        var anchorBal = balanceAsOf(anchorStart, pay.accountId);
+        var startBal;
+        if (pStart === anchorStart) {
+          startBal = anchorBal;
+        } else if (pStart > anchorStart) {
+          var curStart = anchorStart, curBal = anchorBal, g1 = 0;
+          while (curStart < pStart && g1 < 1000) {
+            var cd = lookupPeriodData(curStart);
+            curBal = curBal + pay.amount + cd.otherInc - cd.expTotal;
+            curStart = advanceDate(curStart, pay.freq); g1++;
+          }
+          startBal = curBal;
+        } else {
+          var curStartB = anchorStart, curBalB = anchorBal, g2 = 0;
+          while (curStartB > pStart && g2 < 1000) {
+            var prevStart = prevDate(curStartB, pay.freq);
+            var pdPrev = lookupPeriodData(prevStart);
+            curBalB = curBalB - pay.amount - pdPrev.otherInc + pdPrev.expTotal;
+            curStartB = prevStart; g2++;
+          }
+          startBal = curBalB;
+        }
+        var afterPay = startBal + pay.amount + data.otherInc;
+        var endBal = afterPay - data.expTotal;
+
+        var incByDate = 0;
+        data.otherIncItems.forEach(function (it) { if (it.date <= target) incByDate += it.amount; });
+        var billsByDate = 0, billsAfterDate = 0;
+        data.exps.forEach(function (e) { if (e.date <= target) billsByDate += e.amount; else billsAfterDate += e.amount; });
+        var balOnDay = startBal + pay.amount + incByDate - billsByDate;
+
+        var isTodayPeriod = pStart === anchorStart;
+        var periodLabel = isTodayPeriod ? "Current pay period" : (pStart > anchorStart ? "Future pay period" : "Past pay period");
+        var daysLeftInPeriod = dayDiff(target, lastDay);
+
+        var flow = '<div class="period-flow">' +
+          '<div class="pf"><div class="pf-label">In account at period start</div><div class="pf-val' + (startBal < 0 ? " neg" : "") + '">' + esc(money(startBal)) + '</div></div>' +
+          '<div class="pf"><div class="pf-label">On ' + esc(prettyDate(target)) + ' itself</div><div class="pf-val' + (balOnDay < 0 ? " neg" : "") + '">' + esc(money(balOnDay)) + '</div></div>' +
+          '<div class="pf"><div class="pf-label">Bills in this period (' + data.exps.length + ')</div><div class="pf-val neg">−' + esc(money(data.expTotal).replace("-", "")) + '</div></div>' +
+          '<div class="pf final"><div class="pf-label">After this pay period ends</div><div class="pf-val' + (endBal < 0 ? " neg" : "") + '">' + esc(money(endBal)) + '</div></div>' +
+          '</div>';
+
+        var hero = '<div class="lookup-hero"><div class="l-when">' + esc(prettyDate(target)) + ' falls in: ' + esc(prettyDate(pStart)) + ' → ' + esc(prettyDate(lastDay)) + '</div>' +
+          '<div class="l-sub">' + esc(periodLabel) + ' · Pay of <strong>' + esc(money(pay.amount)) + '</strong> (' + esc(pay.payee) + ') lands <strong>' + esc(prettyDate(pStart)) + '</strong> into ' + esc(payAcctName) + ', and the next pay lands <strong>' + esc(prettyDate(pEnd)) + '</strong>.' +
+          '<br>On <strong>' + esc(prettyDate(target)) + '</strong> itself you\'d have an estimated <strong>' + esc(money(balOnDay)) + '</strong> in ' + esc(payAcctName) + ' after that day\'s bills' +
+          (billsByDate > 0 ? ' (' + esc(money(billsByDate)) + ' in bills due on or before that date in this period)' : ' (no bills in this period due on or before that date)') + '.' +
+          '<br>After the whole period — once all <strong>' + esc(money(data.expTotal)) + '</strong> of bills in it are paid — you\'d have <strong>' + esc(money(endBal)) + '</strong> left before the next payday' +
+          (daysLeftInPeriod >= 0 ? ' (' + daysLeftInPeriod + ' day' + (daysLeftInPeriod === 1 ? "" : "s") + ' from your date to the end of the period).' : '.') +
+          '</div>' + flow + '</div>';
+
+        var billsHtml = "";
+        if (!data.exps.length) {
+          billsHtml = '<p class="fc-note">No recurring bills fall in this pay period — nothing comes out, so the balance stays at ' + esc(money(afterPay)) + ' after the pay lands until the next payday.</p>';
+        } else {
+          var run = afterPay;
+          /* Show the walk from after-pay, but note other income is already in afterPay */
+          var rows = data.exps.map(function (e) {
+            run -= e.amount;
+            var whenTag, rowCls;
+            if (e.date < target) { whenTag = '<span class="pe-when-tag before">Before your date</span>'; rowCls = ""; }
+            else if (e.date === target) { whenTag = '<span class="pe-when-tag on">On your date</span>'; rowCls = " is-selected-date"; }
+            else { whenTag = '<span class="pe-when-tag after">After your date</span>'; rowCls = " is-after-date"; }
+            return '<div class="period-exp' + rowCls + '"><span class="pe-main">' + esc(e.payee) + ' <span class="tag">' + esc(e.category) + '</span> ' + whenTag + '</span>' +
+              '<span class="pe-date">' + esc(prettyDate(e.date)) + '</span>' +
+              '<span class="pe-amt">−' + esc(money(e.amount).replace("-", "")) + '</span>' +
+              '<span class="pe-bal' + (run < 0 ? " neg" : "") + '" title="Balance left right after this bill">→ ' + esc(money(run)) + ' left</span></div>';
+          }).join("");
+          billsHtml = '<div class="lookup-section-title">Bills in this pay period (' + data.exps.length + ') — ' + esc(money(data.expTotal)) + ' total</div>' +
+            '<p class="fc-note" style="margin-top:0">Starting from ' + esc(money(afterPay)) + ' after the pay lands' + (data.otherInc > 0 ? ' (including ' + esc(money(data.otherInc)) + ' other recurring income in this period)' : '') + '. Bills on or before ' + esc(prettyDate(target)) + ' add up to ' + esc(money(billsByDate)) + (billsAfterDate > 0 ? '; another ' + esc(money(billsAfterDate)) + ' is still due after your date, before the period ends.' : '.') + '</p>' +
+            rows +
+            '<div class="period-total"><span>Total bills in this period</span><span class="pe-amt">−' + esc(money(data.expTotal).replace("-", "")) + '</span></div>' +
+            '<div class="period-total" style="font-weight:700;color:var(--ink)"><span>Left in ' + esc(payAcctName) + ' after all these bills (post pay period)</span><span class="pe-amt" style="color:' + (endBal < 0 ? "var(--neg)" : "var(--pos)") + '">' + esc(money(endBal)) + '</span></div>' +
+            '<div class="period-total"><span>Estimated on ' + esc(prettyDate(target)) + ' itself</span><span class="pe-amt" style="font-weight:700">' + esc(money(balOnDay)) + '</span></div>';
+          if (data.otherIncItems.length) {
+            billsHtml += '<div class="lookup-section-title">Other income in this period</div>' + data.otherIncItems.map(function (it) {
+              return '<div class="period-exp"><span class="pe-main">' + esc(it.payee) + ' <span class="tag">' + esc(it.category) + '</span></span><span class="pe-date">' + esc(prettyDate(it.date)) + '</span><span class="pe-amt" style="color:var(--pos)">+' + esc(money(it.amount).replace("-", "")) + '</span></div>';
+            }).join("") + '<p class="fc-note">Other income is already counted in the “after pay lands” starting point above.</p>';
+          }
+        }
+        box.innerHTML = hero + billsHtml +
+          '<p class="fc-note">Estimate only — based on your recurring pay, bills and other recurring income, chained from your ' + esc(payAcctName) + ' balance at the start of the current pay period. One-off ledger entries dated after that anchor aren\'t included, so it matches the Between pays walk-through.</p>';
       }
       function syncSelects() {
         var acctOpts = state.accounts.map(function (a) {
@@ -2366,6 +2729,12 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
       $("fc-pay-source").addEventListener("change", function () {
         fcPayId = $("fc-pay-source").value;
         renderPayPeriods();
+      });
+      $("fc-lookup-date").addEventListener("change", function () { renderDateLookup(); });
+      $("fc-lookup-date").addEventListener("input", function () { renderDateLookup(); });
+      $("fc-lookup-today").addEventListener("click", function () {
+        $("fc-lookup-date").value = todayStr();
+        renderDateLookup();
       });
       $("fc-view-graph").addEventListener("click", function () { setFcView("graph"); });
       $("fc-view-breakdown").addEventListener("click", function () { setFcView("breakdown"); });
@@ -2570,6 +2939,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
       document.querySelector('#form-txn [name="date"]').value = todayStr();
       document.querySelector('#form-recurring [name="nextDate"]').value = todayStr();
       $("fc-start").value = todayStr();
+      if ($("fc-lookup-date")) $("fc-lookup-date").value = todayStr();
       $("fc-end").value = addDaysStr(todayStr(), 90);
       $("hs-start").value = addDaysStr(todayStr(), -89);
       $("hs-end").value = todayStr();
