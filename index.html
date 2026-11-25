@@ -290,6 +290,9 @@
         padding: 11px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap;
       }
       .rec-row:last-child, .rep-row:last-child { border-bottom: none; }
+      .rec-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+      .icon-btn.armed { background: var(--neg); color: #fff; border-radius: 6px; }
+      .icon-btn.armed:hover { background: var(--neg); color: #fff; opacity: .9; }
       .rec-main { min-width: 0; }
       .rec-main .desc { font-weight: 600; overflow-wrap: anywhere; }
       .rec-main .meta { color: var(--ink-faint); font-size: .86rem; }
@@ -654,7 +657,7 @@
       <!-- ============ LEDGER ============ -->
       <section class="panel" id="panel-ledger" role="tabpanel">
         <h2>Ledger</h2>
-        <p class="panel-intro">Every income, expense, and transfer. Mark entries cleared once they show up on your bank statement.</p>
+        <p class="panel-intro">Every income, expense, and transfer. Mark entries cleared once they show up on your bank statement. Deleting an entry here removes only that one entry — if it was posted from a recurring item, the series in the Recurring tab keeps going; use Skip next over there to miss a single future occurrence.</p>
         <div class="card">
           <h2 style="font-size:1.1rem">Add a transaction</h2>
           <form id="form-txn">
@@ -758,8 +761,9 @@
       <!-- ============ RECURRING ============ -->
       <section class="panel" id="panel-recurring" role="tabpanel">
         <h2>Recurring transactions</h2>
-        <p class="panel-intro">Rent, subscriptions, paycheques — set them up once, then post each one to the ledger with a single tap when it comes due.</p>
+        <p class="panel-intro">Rent, subscriptions, paycheques — set them up once, then post each one to the ledger with a single tap when it comes due. <strong>Skip next</strong> misses just the one occurrence shown — nothing is posted to the ledger, and the series carries on from the date after. <strong>Delete series</strong> is the one that removes them all: every future occurrence goes, and the item disappears from Forecast and Between pays (anything you already posted in the Ledger stays). Deleting a single entry in the Ledger, by contrast, only removes that one entry — it never touches the series here.</p>
         <div class="card">
+          <div class="form-msg" id="rec-action-msg" role="status" style="margin:0 0 6px"></div>
           <div id="rec-list"></div>
           <div class="empty" id="rec-empty">
             <strong>No recurring transactions</strong>
@@ -1733,9 +1737,27 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         var b = Date.UTC(Number(pb[0]), Number(pb[1]) - 1, Number(pb[2]));
         return Math.round((b - a) / 86400000);
       }
+      /* Skipped occurrences: "Skip next" records the date it skipped on the
+         item itself (r.skippedDates) and moves nextDate on by one step, so
+         the series survives. Every place that generates occurrence dates
+         filters these out, which keeps Forecast, Between pays and the date
+         lookup from counting a skipped bill or pay. */
+      function recSkipped(r) { return (r && Array.isArray(r.skippedDates)) ? r.skippedDates : []; }
+      function isSkippedDate(r, d) { return recSkipped(r).indexOf(d) !== -1; }
+      function nextUnskipped(r, d) {
+        var guard = 0;
+        while (isSkippedDate(r, d) && guard < 600) { d = advanceDate(d, r.freq); guard++; }
+        return d;
+      }
+      function prevUnskipped(r, d) {
+        var guard = 0;
+        while (isSkippedDate(r, d) && guard < 600) { d = prevDate(d, r.freq); guard++; }
+        return d;
+      }
       /* Every date a recurring item falls on inside [start, end] (inclusive).
          Steps forward from its nextDate; if nextDate is already past the
-         window (e.g. an overdue item), stepping still lands on real dates. */
+         window (e.g. an overdue item), stepping still lands on real dates.
+         Skipped dates never appear. */
       function occurrencesBetween(r, start, end) {
         var out = [];
         if (!r || !r.nextDate || start > end) return out;
@@ -1743,7 +1765,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         var guard = 0;
         while (cursor < start && guard < 600) { cursor = advanceDate(cursor, r.freq); guard++; }
         guard = 0;
-        while (cursor <= end && guard < 600) { out.push(cursor); cursor = advanceDate(cursor, r.freq); guard++; }
+        while (cursor <= end && guard < 600) { if (!isSkippedDate(r, cursor)) out.push(cursor); cursor = advanceDate(cursor, r.freq); guard++; }
         return out;
       }
       /* Balance as of the morning of dateStr: opening balances plus every
@@ -1768,39 +1790,97 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         });
         return total;
       }
+      var recActionMsg = "";
       function renderRecurring() {
         var today = todayStr();
+        var msgEl = $("rec-action-msg");
+        if (msgEl) { msgEl.textContent = recActionMsg; msgEl.className = "form-msg" + (recActionMsg ? " ok" : ""); msgEl.style.margin = "0 0 6px"; }
         $("rec-empty").style.display = state.recurring.length ? "none" : "block";
         var items = state.recurring.slice().sort(function (a, b) { return a.nextDate < b.nextDate ? -1 : 1; });
         $("rec-list").innerHTML = items.map(function (r) {
           var acct = accountById(r.accountId);
           var due = r.nextDate <= today;
+          var skipped = recSkipped(r);
+          var lastSkipped = skipped.length ? skipped[skipped.length - 1] : null;
+          /* Undo is offered only while the last skip is still the occurrence
+             immediately before the current nextDate — once anything else has
+             been posted or skipped, the button simply doesn't appear. */
+          var canUndoSkip = !!lastSkipped && prevDate(r.nextDate, r.freq) === lastSkipped;
           return '<div class="rec-row"><div class="rec-main">' +
             '<div class="desc">' + esc(r.payee) + ' <span class="tag">' + esc(r.category) + '</span></div>' +
-            '<div class="meta">' + esc(r.freq) + ' · ' + (acct ? esc(acct.name) : "(deleted account)") + ' · next ' + prettyDate(r.nextDate) + '</div>' +
+            '<div class="meta">' + esc(r.freq) + ' · ' + (acct ? esc(acct.name) : "(deleted account)") + ' · next ' + prettyDate(r.nextDate) +
+            (skipped.length ? ' · ' + skipped.length + ' skipped' : '') + '</div>' +
+            (lastSkipped ? '<div class="meta">Last skipped: ' + prettyDate(lastSkipped) + '</div>' : '') +
             '</div>' +
             '<span class="due' + (due ? "" : " future") + '">' + (due ? "Due" : "Upcoming") + '</span>' +
             '<span class="v" style="font-family:\'IBM Plex Mono\',monospace;font-weight:600">' + (r.kind === "income" ? "+" : "−") + money(r.amount).replace("-", "") + '</span>' +
-            '<span><button type="button" class="btn small" data-post-rec="' + r.id + '">Post</button> ' +
-            '<button type="button" class="icon-btn" data-del-rec="' + r.id + '" aria-label="Delete recurring transaction">Delete</button></span>' +
+            '<span class="rec-actions">' +
+            '<button type="button" class="btn small" data-post-rec="' + r.id + '">Post</button>' +
+            '<button type="button" class="btn ghost small" data-skip-rec="' + r.id + '" aria-label="Skip the ' + esc(prettyDate(r.nextDate)) + ' occurrence of ' + esc(r.payee) + ' only — the series continues" title="Miss just the ' + esc(prettyDate(r.nextDate)) + ' occurrence — nothing is posted, and the series continues after it">Skip next</button>' +
+            (canUndoSkip ? '<button type="button" class="btn ghost small" data-undo-skip-rec="' + r.id + '" aria-label="Undo the skip of ' + esc(prettyDate(lastSkipped)) + ' for ' + esc(r.payee) + '">Undo skip</button>' : '') +
+            '<button type="button" class="icon-btn" data-del-rec="' + r.id + '" aria-label="Delete the whole ' + esc(r.payee) + ' series — removes every future occurrence">Delete series</button></span>' +
             '</div>';
         }).join("");
         $("rec-list").querySelectorAll("[data-post-rec]").forEach(function (btn) {
           btn.addEventListener("click", function () {
             var r = state.recurring.filter(function (x) { return x.id === btn.getAttribute("data-post-rec"); })[0];
             if (!r) return;
+            var postedDate = r.nextDate;
             state.transactions.push({
-              id: uid(), date: r.nextDate, kind: r.kind, amount: r.amount,
+              id: uid(), date: postedDate, kind: r.kind, amount: r.amount,
               accountId: r.accountId, toAccountId: null, category: r.category,
               payee: r.payee, cleared: false
             });
-            r.nextDate = advanceDate(r.nextDate, r.freq);
+            r.nextDate = nextUnskipped(r, advanceDate(r.nextDate, r.freq));
+            recActionMsg = "Posted “" + r.payee + "” for " + prettyDate(postedDate) + " to the Ledger — next one is " + prettyDate(r.nextDate) + ".";
+            render();
+          });
+        });
+        $("rec-list").querySelectorAll("[data-skip-rec]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var r = state.recurring.filter(function (x) { return x.id === btn.getAttribute("data-skip-rec"); })[0];
+            if (!r) return;
+            var skippedDate = r.nextDate;
+            if (!Array.isArray(r.skippedDates)) r.skippedDates = [];
+            if (r.skippedDates.indexOf(skippedDate) === -1) r.skippedDates.push(skippedDate);
+            r.nextDate = nextUnskipped(r, advanceDate(skippedDate, r.freq));
+            recActionMsg = "Skipped just the " + prettyDate(skippedDate) + " “" + r.payee + "” — nothing was posted to the Ledger, and the series is still active. Next one is " + prettyDate(r.nextDate) + ".";
+            render();
+          });
+        });
+        $("rec-list").querySelectorAll("[data-undo-skip-rec]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var r = state.recurring.filter(function (x) { return x.id === btn.getAttribute("data-undo-skip-rec"); })[0];
+            if (!r || !recSkipped(r).length) return;
+            var restored = r.skippedDates.pop();
+            r.nextDate = restored;
+            recActionMsg = "Skip undone — “" + r.payee + "” is due again on " + prettyDate(restored) + ".";
             render();
           });
         });
         $("rec-list").querySelectorAll("[data-del-rec]").forEach(function (btn) {
           btn.addEventListener("click", function () {
-            state.recurring = state.recurring.filter(function (x) { return x.id !== btn.getAttribute("data-del-rec"); });
+            var id = btn.getAttribute("data-del-rec");
+            var r = state.recurring.filter(function (x) { return x.id === id; })[0];
+            if (!r) return;
+            /* Two-step delete, like profile delete: the first tap only arms
+               the button and says plainly that the WHOLE series goes, so
+               nobody loses every future occurrence by accident. */
+            if (btn.getAttribute("data-armed") !== "1") {
+              btn.setAttribute("data-armed", "1");
+              btn.classList.add("armed");
+              btn.textContent = "Tap again — deletes ALL future “" + r.payee + "”";
+              setTimeout(function () {
+                if (btn.isConnected && btn.getAttribute("data-armed") === "1") {
+                  btn.removeAttribute("data-armed");
+                  btn.classList.remove("armed");
+                  btn.textContent = "Delete series";
+                }
+              }, 5000);
+              return;
+            }
+            state.recurring = state.recurring.filter(function (x) { return x.id !== id; });
+            recActionMsg = "Deleted the whole “" + r.payee + "” series — no future occurrences will be posted or forecast. Entries already in the Ledger were kept.";
             render();
           });
         });
@@ -2436,12 +2516,15 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         if (!pay) { box.innerHTML = ""; renderDateLookup(); return; }
 
         /* Pay dates: walk back from nextDate to the most recent payday on
-           or before today, then step forward for the periods to show. */
+           or before today, then step forward for the periods to show.
+           A skipped pay is not a payday — periods step over it, so the
+           stretch before it simply runs until the next pay that lands. */
         var today = todayStr();
         var first = pay.nextDate, guard = 0;
         while (first > today && guard < 600) { first = prevDate(first, pay.freq); guard++; }
+        first = prevUnskipped(pay, first);
         var dates = [first];
-        for (var i = 0; i < 4; i++) dates.push(advanceDate(dates[dates.length - 1], pay.freq));
+        for (var i = 0; i < 4; i++) dates.push(nextUnskipped(pay, advanceDate(dates[dates.length - 1], pay.freq)));
 
         function periodData(pStart, pEndExclusive) {
           var lastDay = addDaysStr(pEndExclusive, -1);
@@ -2571,7 +2654,8 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
           while (cursor > dateStr && guard < 1000) { cursor = prevDate(cursor, pay.freq); guard++; }
           guard = 0;
           while (advanceDate(cursor, pay.freq) <= dateStr && guard < 1000) { cursor = advanceDate(cursor, pay.freq); guard++; }
-          return cursor;
+          /* A skipped pay never landed, so it can't start a period. */
+          return prevUnskipped(pay, cursor);
         }
         function lookupOccurrences(r, start, end) {
           /* Like occurrencesBetween, but also steps backwards from
@@ -2588,11 +2672,11 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
             if (pv >= start && pv < cursor) { cursor = pv; guard++; } else break;
           }
           guard = 0;
-          while (cursor <= end && guard < 1200) { if (cursor >= start) out.push(cursor); cursor = advanceDate(cursor, r.freq); guard++; }
+          while (cursor <= end && guard < 1200) { if (cursor >= start && !isSkippedDate(r, cursor)) out.push(cursor); cursor = advanceDate(cursor, r.freq); guard++; }
           return out;
         }
         function lookupPeriodData(pStart) {
-          var pEndEx = advanceDate(pStart, pay.freq);
+          var pEndEx = nextUnskipped(pay, advanceDate(pStart, pay.freq));
           var lastDay = addDaysStr(pEndEx, -1);
           var exps = [], otherIncItems = [], otherInc = 0;
           state.recurring.forEach(function (r) {
@@ -2623,13 +2707,13 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
           while (curStart < pStart && g1 < 1000) {
             var cd = lookupPeriodData(curStart);
             curBal = curBal + pay.amount + cd.otherInc - cd.expTotal;
-            curStart = advanceDate(curStart, pay.freq); g1++;
+            curStart = nextUnskipped(pay, advanceDate(curStart, pay.freq)); g1++;
           }
           startBal = curBal;
         } else {
           var curStartB = anchorStart, curBalB = anchorBal, g2 = 0;
           while (curStartB > pStart && g2 < 1000) {
-            var prevStart = prevDate(curStartB, pay.freq);
+            var prevStart = prevUnskipped(pay, prevDate(curStartB, pay.freq));
             var pdPrev = lookupPeriodData(prevStart);
             curBalB = curBalB - pay.amount - pdPrev.otherInc + pdPrev.expTotal;
             curStartB = prevStart; g2++;
@@ -2811,7 +2895,8 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         state.recurring.push({
           id: uid(), payee: String(fd.get("payee") || "").trim(), kind: String(fd.get("kind")),
           amount: amount, accountId: accountId, category: String(fd.get("category") || ""),
-          freq: String(fd.get("freq")), nextDate: String(fd.get("nextDate")) || todayStr()
+          freq: String(fd.get("freq")), nextDate: String(fd.get("nextDate")) || todayStr(),
+          skippedDates: []
         });
         e.target.reset();
         e.target.querySelector('[name="nextDate"]').value = todayStr();
