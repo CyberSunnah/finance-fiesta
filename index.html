@@ -117,6 +117,56 @@
       .profile-create label { font-size: .85rem; font-weight: 600; color: var(--ink-soft); display: block; }
       .profile-create input { display: block; margin-top: 5px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); min-width: min(280px, 78vw); }
 
+      /* ---------- Home / welcome screen ---------- */
+      body.home-open .wrap { display: none; }
+      #home-screen { display: none; }
+      body.home-open #home-screen { display: block; }
+      .home-wrap { max-width: 920px; margin: 0 auto; padding: 36px 16px 64px; }
+      .home-head { max-width: 640px; }
+      .home-head h1 {
+        font-family: "Newsreader", Georgia, serif; font-weight: 600;
+        font-size: clamp(2rem, 6vw, 3rem); margin: 0; letter-spacing: -0.01em; line-height: 1.08;
+      }
+      .home-head .home-lede { color: var(--ink-soft); font-size: 1.05rem; margin: 12px 0 0; line-height: 1.55; }
+      .home-status {
+        display: inline-flex; flex-wrap: wrap; gap: 6px 8px; align-items: center;
+        margin-top: 16px; background: var(--surface); border: 1px solid var(--line);
+        border-radius: 999px; padding: 7px 14px; font-size: .88rem; color: var(--ink-soft);
+        box-shadow: var(--shadow);
+      }
+      .home-continue {
+        margin-top: 26px; background: var(--accent-soft); border: 1px solid var(--accent);
+        border-radius: var(--radius); padding: 20px; display: flex; flex-wrap: wrap;
+        gap: 16px; align-items: center; justify-content: space-between;
+      }
+      .home-continue .hc-main { min-width: min(420px, 100%); flex: 1 1 320px; }
+      .home-continue .hc-kicker { font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--accent-strong); }
+      .home-continue .hc-name { font-family: "Newsreader", Georgia, serif; font-weight: 600; font-size: 1.5rem; margin: 3px 0 2px; overflow-wrap: anywhere; }
+      .home-continue .hc-meta { color: var(--ink-soft); font-size: .93rem; }
+      .home-continue .hc-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+      .home-continue select {
+        display: block; margin-top: 5px; padding: 8px 10px; border: 1px solid var(--line);
+        border-radius: 7px; background: var(--surface); color: var(--ink); min-height: 42px; max-width: 78vw;
+      }
+      .home-continue label { font-size: .85rem; font-weight: 600; color: var(--ink-soft); }
+      .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; align-items: start; }
+      @media (max-width: 760px) { .home-grid { grid-template-columns: 1fr; } }
+      .home-card {
+        background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+        box-shadow: var(--shadow); padding: 20px;
+      }
+      .home-card h2 { font-size: 1.2rem; }
+      .home-card .home-card-intro { color: var(--ink-soft); font-size: .94rem; margin: 0 0 14px; line-height: 1.5; }
+      .home-card label.field { margin-bottom: 10px; }
+      .home-cloud-row {
+        display: flex; justify-content: space-between; align-items: center; gap: 10px;
+        padding: 11px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap;
+      }
+      .home-cloud-row:last-child { border-bottom: none; }
+      .home-cloud-row .hc-row-meta { color: var(--ink-faint); font-size: .85rem; margin-top: 1px; }
+      .home-skip { margin-top: 18px; text-align: center; }
+      .home-foot { margin-top: 22px; color: var(--ink-faint); font-size: .88rem; text-align: center; line-height: 1.5; }
+
       /* ---------- Tabs ---------- */
       nav.tabs {
         display: flex; gap: 4px; flex-wrap: wrap; margin: 22px 0 18px;
@@ -462,8 +512,60 @@
       }
     </style>
   </head>
-  <body>
-    <div class="wrap">
+  <body class="home-open">
+    <!-- ============ HOME / WELCOME ============ -->
+    <main id="home-screen" aria-label="Welcome — choose a profile">
+      <div class="home-wrap">
+        <div class="home-head">
+          <h1>Where do you want to start?</h1>
+          <p class="home-lede">Open the profile you were already using, start a brand-new one, or pull a profile down from the cloud — no digging through tabs to find Cloud Sync first.</p>
+          <div class="home-status"><span class="cloud-dot" id="home-cloud-dot" aria-hidden="true"></span><span id="home-cloud-status">Checking cloud connection…</span></div>
+        </div>
+
+        <div class="home-continue" id="home-continue-card">
+          <div class="hc-main">
+            <div class="hc-kicker">Continue where you left off</div>
+            <div class="hc-name" id="home-continue-name">My Finances</div>
+            <div class="hc-meta" id="home-continue-meta">Saved in this browser on this device.</div>
+          </div>
+          <div class="hc-actions">
+            <label id="home-profile-switch-wrap" style="display:none">Switch local profile
+              <select id="home-profile-select" aria-label="Choose a profile saved in this browser"></select>
+            </label>
+            <button class="btn" id="home-btn-continue" type="button">Open this profile</button>
+          </div>
+        </div>
+
+        <div class="home-grid">
+          <div class="home-card">
+            <h2>Start a new profile</h2>
+            <p class="home-card-intro">A fresh, empty set of books — its own accounts, ledger, budgets and recurring bills, kept separate from your other profiles. Good for a household budget, a side business, or starting over.</p>
+            <form id="form-home-new">
+              <label class="field">New profile name
+                <input name="name" id="home-new-name" maxlength="40" required placeholder="e.g. Household, Side business, Ibrahim" />
+              </label>
+              <button class="btn" type="submit">Create &amp; open new profile</button>
+              <div class="form-msg" id="home-new-msg" role="status"></div>
+            </form>
+          </div>
+
+          <div class="home-card">
+            <h2>Pull a profile from the cloud</h2>
+            <p class="home-card-intro">Moved desks, switched phones, or just want the copy that's in Supabase? Load what's in the cloud and pull the one you want — it becomes the profile open in this browser.</p>
+            <button class="btn" id="home-btn-list-cloud" type="button">Show profiles in the cloud</button>
+            <div class="form-msg" id="home-cloud-msg" role="status"></div>
+            <div id="home-cloud-list" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <div class="home-skip">
+          <button class="btn ghost" id="home-btn-skip" type="button">Skip — just open the tracker</button>
+        </div>
+        <p class="home-foot">You can switch profiles any time from the profile bar at the top of the tracker, push or pull in the Cloud Sync tab, or come back here with the Home button. Picking “continue” or “skip” doesn't change or overwrite anything in the cloud.</p>
+      </div>
+    </main>
+
+    <div class="wrap" id="app-wrap">
       <header class="top">
         <div class="title-row">
           <h1>Personal Finance Tracker</h1>
@@ -485,6 +587,7 @@
             </div>
           </div>
           <div class="profile-actions">
+            <button class="btn ghost small" id="btn-open-home" type="button">Home / switch profile</button>
             <label class="sr-only" for="profile-select" style="position:absolute;left:-9999px">Switch profile</label>
             <select id="profile-select" aria-label="Switch profile"></select>
             <button class="btn ghost small" id="btn-new-profile" type="button">+ New profile</button>
@@ -911,7 +1014,7 @@
 
         <div class="baked-box" id="baked-box">
           <strong id="baked-title">✓ Baked-in connection is active — this file points at your database</strong>
-          <p class="fineprint" style="margin:6px 0 0" id="baked-detail">This copy of <code>index.html</code> already has your Supabase URL + publishable key baked in, so any browser that opens it connects automatically — no pasting the key on your phone or work PC, and no Save connection step. Auto-sync is on by default, and on a fresh device with no local data the app pulls your cloud copy automatically on first load.</p>
+          <p class="fineprint" style="margin:6px 0 0" id="baked-detail">This copy of <code>index.html</code> already has your Supabase URL + publishable key baked in, so any browser that opens it connects automatically — no pasting the key on your phone or work PC, and no Save connection step. Auto-sync is on by default, and the home screen you see on open lets you pull your cloud copy in one tap.</p>
         </div>
 
         <div class="card">
@@ -920,7 +1023,7 @@
             <div class="step"><div class="step-num">1</div><div class="step-body"><strong>Create a free Supabase project</strong><p>Go to <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a> → New project. Pick any name (e.g. <em>finance-tracker</em>) and a region near you. Wait ~1 minute for it to provision. Free tier is enough.</p></div></div>
             <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Create the table — run this SQL once</strong><p>In Supabase: left sidebar → <strong>SQL Editor</strong> → New query → paste the SQL below → Run. You only do this once.</p></div></div>
             <div class="step"><div class="step-num">3</div><div class="step-body"><strong>Already done — the link is baked into this file</strong><p>Your Project URL and publishable key are already set as <code>BAKED_SUPABASE_URL</code> / <code>BAKED_SUPABASE_KEY</code> at the top of this file's script, so any browser opening it is already connected and auto-syncs — nothing to paste on your phone or work PC, ever. The Connection form below is only a per-browser override / fallback. If the values ever change, edit only those two lines — never find-and-replace placeholder words across the whole file.</p></div></div>
-            <div class="step"><div class="step-num">4</div><div class="step-body"><strong>Nothing to do on your other devices</strong><p>Just open the same site there. If that browser has no local data yet, the app pulls your cloud copy automatically on first load. Auto-sync is on by default and pushes a few seconds after every change. The Push / Pull buttons below are there if you ever want to sync manually.</p></div></div>
+            <div class="step"><div class="step-num">4</div><div class="step-body"><strong>Nothing to do on your other devices</strong><p>Just open the same site there — the home screen asks whether to start new or pull from the cloud, so pick Pull there. Auto-sync is on by default and pushes a few seconds after every change. The Push / Pull buttons below are there if you ever want to sync manually.</p></div></div>
           </div>
           <h2 style="font-size:1rem; margin-top:20px">SQL to run in Supabase</h2>
           <div class="code-block" id="sb-sql">create table if not exists public.finance_tracker_data (
@@ -1016,7 +1119,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
             <li><strong>GitHub:</strong> create a repository, add the downloaded file as <code>index.html</code>, then enable GitHub Pages (Settings → Pages → deploy from the main branch) to get a public URL.</li>
             <li><strong>Netlify:</strong> drag the folder containing <code>index.html</code> onto Netlify's Sites page — it deploys instantly. You can host as many separate sites as you like on the free plan, so this and your geo tool can live side by side, each with its own URL.</li>
             <li><strong>Editing at work:</strong> edit the file in the GitHub web editor or push changes from any machine; the host redeploys automatically. With Supabase connected, your data lives in the database — redeploying the HTML won't lose it. Without Supabase, each browser keeps its own copy, so use export/import to move books between devices.</li>
-            <li><strong>Supabase + Netlify/GitHub (baked-in):</strong> this file already carries your Project URL and publishable key in the <code>BAKED_SUPABASE_URL</code> / <code>BAKED_SUPABASE_KEY</code> lines at the top of the script — just upload it as-is. Every device that opens the live URL is already connected, with no setup on phone or work PC, and a fresh device pulls your cloud data automatically on first load.</li>
+            <li><strong>Supabase + Netlify/GitHub (baked-in):</strong> this file already carries your Project URL and publishable key in the <code>BAKED_SUPABASE_URL</code> / <code>BAKED_SUPABASE_KEY</code> lines at the top of the script — just upload it as-is. Every device that opens the live URL is already connected, with no setup on phone or work PC, and on a fresh device the home screen lets you pull your cloud data in one tap.</li>
           </ol>
         </div>
       </section>
@@ -1187,7 +1290,7 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         if (baked.ready) {
           box.className = "baked-box";
           if (title) title.textContent = "✓ Baked-in connection is active — this file points at your database";
-          if (detail) detail.innerHTML = "This copy of <code>index.html</code> already has your Supabase URL + publishable key baked in (<code>" + baked.url.replace(/</g, "&lt;") + "</code>), so any browser that opens it connects automatically — no setup on your phone or work PC, and no Save connection step. Auto-sync is on by default. On a fresh device with no local data, your cloud copy is pulled automatically on first load. To point it at a different project, edit only the <code>BAKED_SUPABASE_URL</code> / <code>BAKED_SUPABASE_KEY</code> lines at the top of the script and re-upload.";
+          if (detail) detail.innerHTML = "This copy of <code>index.html</code> already has your Supabase URL + publishable key baked in (<code>" + baked.url.replace(/</g, "&lt;") + "</code>), so any browser that opens it connects automatically — no setup on your phone or work PC, and no Save connection step. Auto-sync is on by default. On open, the home screen lets you pull your cloud copy in one tap. To point it at a different project, edit only the <code>BAKED_SUPABASE_URL</code> / <code>BAKED_SUPABASE_KEY</code> lines at the top of the script and re-upload.";
           if (note) note.innerHTML = "Baked-in connection active — you can leave this form blank. Anything you save here is only a per-browser override and will take precedence over the baked-in values in this browser.";
         } else {
           box.className = "baked-box warn";
@@ -1268,11 +1371,11 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
         }).then(function (rows) { return rows && rows.length ? rows[0] : null; });
       }
       function sbPull(idOverride, nameOverride) {
-        if (!sbConfigured()) { setMsg("msg-sync", "Not connected — this file has no valid baked-in connection. Paste your Project URL + publishable key in the Connection form and Save connection, or re-upload a copy with the keys baked in.", false); return; }
+        if (!sbConfigured()) { setMsg("msg-sync", "Not connected — this file has no valid baked-in connection. Paste your Project URL + publishable key in the Connection form and Save connection, or re-upload a copy with the keys baked in.", false); return Promise.resolve(false); }
         var targetId = idOverride || activeProfileId;
         setCloudStatus("syncing", "Cloud: Syncing — pulling from Supabase…");
-        sbFetchProfile(targetId).then(function (row) {
-          if (!row) { setCloudStatus("on", "Cloud: Connected — no cloud copy found for this profile yet. Push first."); setMsg("msg-sync", "No profile with this ID in Supabase yet. Push this profile first, or use List profiles in cloud to pull a different one.", false); refreshCloudStatus(); return; }
+        return sbFetchProfile(targetId).then(function (row) {
+          if (!row) { setCloudStatus("on", "Cloud: Connected — no cloud copy found for this profile yet. Push first."); setMsg("msg-sync", "No profile with this ID in Supabase yet. Push this profile first, or use List profiles in cloud to pull a different one.", false); refreshCloudStatus(); return false; }
           sbPulling = true;
           /* If pulling a profile that doesn't exist locally, create it */
           if (!profiles.some(function (p) { return p.id === targetId; })) {
@@ -1288,10 +1391,12 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
           sbPulling = false;
           refreshCloudStatus();
           setMsg("msg-sync", "Pulled “" + (row.profile_name || targetId) + "” from Supabase (cloud updated " + (row.updated_at ? new Date(row.updated_at).toLocaleString("en-CA") : "unknown") + "). It's now saved in this browser too.", true);
+          return true;
         }).catch(function (err) {
           sbPulling = false;
           setCloudStatus("error", "Cloud: Pull failed — " + err.message);
           setMsg("msg-sync", "Pull failed: " + err.message, false);
+          return false;
         });
       }
       function sbTest() {
@@ -2935,6 +3040,125 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
       $("btn-pull-cloud").addEventListener("click", function () { sbPull(); });
       $("btn-refresh-cloud").addEventListener("click", function () { sbListCloud(); });
 
+      /* ---------- Home / welcome screen ---------- */
+      function showHome() {
+        renderHome();
+        document.body.classList.add("home-open");
+        window.scrollTo(0, 0);
+      }
+      function hideHome() {
+        document.body.classList.remove("home-open");
+        window.scrollTo(0, 0);
+      }
+      function renderHome() {
+        var nameEl = $("home-continue-name");
+        if (!nameEl) return;
+        var p = currentProfile();
+        nameEl.textContent = p ? p.name : "My Finances";
+        var hasData = state.accounts.length || state.transactions.length || state.recurring.length;
+        $("home-continue-meta").textContent = hasData
+          ? state.accounts.length + " account" + (state.accounts.length === 1 ? "" : "s") + " · " + state.transactions.length + " transaction" + (state.transactions.length === 1 ? "" : "s") + " · " + state.recurring.length + " recurring — saved in this browser on this device."
+          : "This profile is empty in this browser so far. If your books are in the cloud, pull them below instead of opening an empty profile.";
+        $("home-btn-continue").textContent = "Open “" + (p ? p.name : "My Finances") + "”";
+        var wrap = $("home-profile-switch-wrap");
+        var sel = $("home-profile-select");
+        if (profiles.length > 1) {
+          wrap.style.display = "";
+          sel.innerHTML = profiles.map(function (pr) {
+            return '<option value="' + esc(pr.id) + '"' + (pr.id === activeProfileId ? " selected" : "") + '>' + esc(pr.name) + '</option>';
+          }).join("");
+        } else {
+          wrap.style.display = "none";
+        }
+        var dot = $("home-cloud-dot");
+        var status = $("home-cloud-status");
+        if (sbConfigured()) {
+          var cfg = sbConfig();
+          var last = lsGet(LS_SB_LAST + activeProfileId);
+          dot.className = "cloud-dot on";
+          status.textContent = "Cloud connected" + (cfg.usingBaked ? " via the baked-in link" : "") + (last ? " · this profile last synced " + new Date(last).toLocaleString("en-CA", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : " · not yet synced for this profile in this browser");
+        } else {
+          dot.className = "cloud-dot";
+          status.textContent = "Cloud not connected in this copy — new and local profiles still work; see the Cloud Sync tab in the tracker to connect.";
+        }
+      }
+      function homeSetCloudMsg(text, ok) {
+        var el = $("home-cloud-msg");
+        if (!el) return;
+        el.textContent = text;
+        el.className = "form-msg " + (ok ? "ok" : "err");
+      }
+      function homeListCloud() {
+        var box = $("home-cloud-list");
+        if (!sbConfigured()) { homeSetCloudMsg("Not connected — this copy has no valid baked-in Supabase link, so there's no cloud to pull from. Open the tracker and use the Cloud Sync tab to connect this browser.", false); return; }
+        homeSetCloudMsg("", true);
+        box.innerHTML = '<p class="fineprint" style="margin-top:10px">Loading profiles from the cloud…</p>';
+        fetch(sbTableUrl("?select=id,profile_name,updated_at&order=updated_at.desc"), { method: "GET", headers: sbHeaders() }).then(function (res) {
+          if (!res.ok) return res.text().then(function (t) { throw new Error("Supabase " + res.status + ": " + t.slice(0, 220)); });
+          return res.json();
+        }).then(function (rows) {
+          if (!rows || !rows.length) { box.innerHTML = '<p class="fineprint" style="margin-top:10px">No profiles in the cloud yet. Open a profile and Push it from the Cloud Sync tab to create the first one.</p>'; return; }
+          box.innerHTML = rows.map(function (r) {
+            var isCurrent = r.id === activeProfileId;
+            return '<div class="home-cloud-row"><div><strong>' + esc(r.profile_name || r.id) + '</strong>' + (isCurrent ? ' <span class="tag">open locally</span>' : '') + '<div class="hc-row-meta">Updated ' + (r.updated_at ? new Date(r.updated_at).toLocaleString("en-CA") : "—") + '</div></div><button type="button" class="btn ghost small" data-home-pull-id="' + esc(r.id) + '">Pull &amp; open</button></div>';
+          }).join("");
+          box.querySelectorAll("[data-home-pull-id]").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+              var id = btn.getAttribute("data-home-pull-id");
+              btn.disabled = true;
+              btn.textContent = "Pulling…";
+              homeSetCloudMsg("Pulling that profile from the cloud…", true);
+              sbPull(id).then(function (ok) {
+                if (ok) { renderHome(); hideHome(); }
+                else {
+                  btn.disabled = false;
+                  btn.textContent = "Pull & open";
+                  homeSetCloudMsg("That pull didn't work — check the message in the Cloud Sync tab, or try again. Nothing was overwritten.", false);
+                }
+              });
+            });
+          });
+        }).catch(function (err) {
+          box.innerHTML = "";
+          homeSetCloudMsg("Couldn't list cloud profiles: " + err.message, false);
+        });
+      }
+      $("home-btn-continue").addEventListener("click", function () { hideHome(); });
+      $("home-btn-skip").addEventListener("click", function () { hideHome(); });
+      $("btn-open-home").addEventListener("click", function () { showHome(); });
+      $("home-profile-select").addEventListener("change", function () {
+        var id = $("home-profile-select").value;
+        if (!id || id === activeProfileId) { renderHome(); return; }
+        saveState();
+        activeProfileId = id;
+        state = loadSavedState(activeProfileId) || blankState();
+        persistProfiles();
+        render();
+        renderHome();
+      });
+      $("home-btn-list-cloud").addEventListener("click", function () { homeListCloud(); });
+      $("form-home-new").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var name = String(new FormData(e.target).get("name") || "").trim();
+        if (!name) return;
+        if (profiles.some(function (p) { return p.name.toLowerCase() === name.toLowerCase(); })) {
+          var msg = $("home-new-msg");
+          msg.textContent = "A profile with that name already exists — pick a different name, or open it with Continue / the switcher above.";
+          msg.className = "form-msg err";
+          return;
+        }
+        saveState();
+        var np = { id: newId(), name: name };
+        profiles.push(np);
+        activeProfileId = np.id;
+        state = blankState();
+        persistProfiles();
+        e.target.reset();
+        render();
+        hideHome();
+        switchTab("accounts");
+      });
+
       /* ---------- Init ---------- */
       document.querySelector('#form-txn [name="date"]').value = todayStr();
       document.querySelector('#form-recurring [name="nextDate"]').value = todayStr();
@@ -2945,7 +3169,11 @@ create policy "pft anon delete" on public.finance_tracker_data for delete using 
       $("hs-end").value = todayStr();
       render();
       setTimeout(function () { sbBootGuard = false; }, 3500);
-      sbBootAutoPull();
+      /* The home screen is the first thing on open (body starts with
+         .home-open), so there is no silent auto-pull behind it any more:
+         the user picks Continue, New profile, or Pull from the cloud.
+         sbBootAutoPull is intentionally not called here. */
+      renderHome();
     </script>
   </body>
 </html>
